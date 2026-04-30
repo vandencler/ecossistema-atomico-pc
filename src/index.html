@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self';">
+  <title>Ecossistema Atomico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="collapsed-tab" id="collapsed-tab">
+    <img class="tab-logo" src="img/logo.png" alt="Atomico">
+  </div>
+
+  <div class="sidebar" id="sidebar" hidden>
+    <div class="sidebar-header">
+      <div class="header-title">
+        <img class="header-logo" src="img/logo.png" alt="Atomico">
+        <span class="logo-text">Atomico</span>
+      </div>
+      <button class="btn-collapse" id="btn-collapse" type="button" title="Recolher">›</button>
+    </div>
+
+    <div class="module-nav" id="module-nav">
+      <button class="nav-btn active" data-module="clientes" type="button">
+        <span class="nav-icon">C</span><span class="nav-label">Clientes</span>
+      </button>
+      <button class="nav-btn" data-module="aniversarios" type="button">
+        <span class="nav-icon">A</span><span class="nav-label">Aniversarios</span>
+      </button>
+      <button class="nav-btn" data-module="sav" type="button">
+        <span class="nav-icon">S</span><span class="nav-label">SAV</span>
+      </button>
+      <button class="nav-btn" data-module="sync" type="button">
+        <span class="nav-icon">Y</span><span class="nav-label">Sync</span>
+      </button>
+      <button class="nav-btn" data-module="config" type="button">
+        <span class="nav-icon">G</span><span class="nav-label">Config</span>
+      </button>
+    </div>
+
+    <div class="module-content" id="module-content">
+      <div class="module" id="mod-clientes">
+        <div class="search-box">
+          <input type="text" id="search-input" class="search-input"
+                 placeholder="Nome, CPF, telefone, email...">
+          <div class="search-hint">Ex: Paulo 7678 ou 000.015</div>
+        </div>
+
+        <div class="search-results" id="search-results"></div>
+
+        <div class="client-dashboard" id="client-dashboard" hidden>
+          <div class="client-header" id="client-header"></div>
+          <div class="client-stats" id="client-stats"></div>
+
+          <div class="client-tabs">
+            <button class="tab-btn active" data-tab="compras" type="button">Compras</button>
+            <button class="tab-btn" data-tab="produtos" type="button">Produtos</button>
+            <button class="tab-btn" data-tab="recomendacoes" type="button">Sugestoes</button>
+            <button class="tab-btn" data-tab="cadastro" type="button">Cadastro</button>
+          </div>
+
+          <div class="tab-content" id="tab-compras"></div>
+          <div class="tab-content" id="tab-produtos" hidden></div>
+          <div class="tab-content" id="tab-recomendacoes" hidden></div>
+          <div class="tab-content" id="tab-cadastro" hidden></div>
+
+          <div class="whatsapp-bar" id="whatsapp-bar"></div>
+        </div>
+      </div>
+
+      <div class="module" id="mod-aniversarios" hidden>
+        <div class="birthday-header">
+          <div class="birthday-title">Aniversariantes</div>
+          <button class="birthday-refresh" id="birthday-refresh" type="button">Atualizar</button>
+        </div>
+        <div class="birthday-columns">
+          <div class="birthday-column">
+            <div class="birthday-column-title">Hoje</div>
+            <div class="birthday-list" id="birthday-today">
+              <div class="birthday-empty">Abra o modulo para carregar</div>
+            </div>
+          </div>
+          <div class="birthday-column">
+            <div class="birthday-column-title">Proximos 7 dias</div>
+            <div class="birthday-list" id="birthday-week">
+              <div class="birthday-empty">Abra o modulo para carregar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" id="mod-sav" hidden>
+        <div class="sav-toolbar">
+          <div>
+            <div class="sav-title">Fila SAV</div>
+            <div class="sav-subtitle">Correcoes pendentes para validacao do gestor</div>
+          </div>
+          <button class="sav-refresh-btn" id="sav-refresh" type="button">Atualizar</button>
+        </div>
+        <div class="sav-summary" id="sav-summary"></div>
+        <div class="sav-list" id="sav-list">
+          <div class="sav-empty">Abra o modulo para carregar</div>
+        </div>
+      </div>
+
+      <div class="module" id="mod-sync" hidden>
+        <div class="sync-header">
+          <div class="sync-title">Sincronização</div>
+          <button class="sync-refresh-btn" id="sync-refresh" type="button">Verificar</button>
+        </div>
+        <div class="sync-summary" id="sync-summary"></div>
+        <div class="sync-list" id="sync-list">
+          <div class="sync-empty">Verifique o status para carregar</div>
+        </div>
+        <div class="sync-actions" id="sync-actions" hidden>
+          <button class="sync-all-btn" id="sync-all" type="button">Sincronizar Aprovadas</button>
+        </div>
+      </div>
+
+      <div class="module" id="mod-config" hidden>
+        <div class="config-header">
+          <div class="config-title">Configurações</div>
+        </div>
+        <div class="config-section">
+          <div class="config-section-title">Status dos Bancos de Dados</div>
+          <div id="db-status-container">Carregando status...</div>
+        </div>
+        <div class="config-section">
+          <div class="config-section-title">Parâmetros do Sistema</div>
+          <div id="system-configs-container">Carregando parâmetros...</div>
+        </div>
+        <div class="config-section">
+          <div class="config-section-title">Conexão Atual (config.local.json)</div>
+          <div id="local-settings-container">Carregando...</div>
+        </div>
+        <div class="config-section">
+          <div class="config-section-title">Métricas de Operação</div>
+          <div id="ops-metrics-container">Carregando métricas...</div>
+        </div>
+        <div class="config-section">
+          <div class="config-section-title">Sobre</div>
+          <div class="config-info">
+            <p>Ecossistema Atômico v1.0.0</p>
+            <p>Desenvolvido para Empório Natural</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

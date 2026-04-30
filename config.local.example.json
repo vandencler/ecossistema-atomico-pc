@@ -1,0 +1,22 @@
+{
+  "databases": {
+    "mirror": {
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "ALTERDATA_SHOP_ESPELHO",
+      "user": "postgres",
+      "password": "PREENCHER",
+      "connectionTimeoutMillis": 5000,
+      "max": 5
+    },
+    "ecosystem": {
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "ECOSSISTEMA_ATOMICO",
+      "user": "postgres",
+      "password": "PREENCHER",
+      "connectionTimeoutMillis": 5000,
+      "max": 3
+    }
+  }
+}

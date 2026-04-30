@@ -1,0 +1,33 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('atomico', {
+  toggleSidebar: () => ipcRenderer.invoke('toggle-sidebar'),
+  getSidebarState: () => ipcRenderer.invoke('get-sidebar-state'),
+  moveTag: (deltaY) => ipcRenderer.invoke('move-tag', deltaY),
+  getNavigationAlerts: () => ipcRenderer.invoke('get-navigation-alerts'),
+  onSidebarToggled: (cb) => ipcRenderer.on('sidebar-toggled', (_, expanded) => cb(expanded)),
+  searchClient: (query) => ipcRenderer.invoke('search-client', query),
+  birthdayCustomers: () => ipcRenderer.invoke('birthday-customers'),
+  clientDashboard: (id) => ipcRenderer.invoke('client-dashboard', id),
+  clientRecommendations: (id) => ipcRenderer.invoke('client-recommendations', id),
+  savActionQueue: (filters) => ipcRenderer.invoke('sav-action-queue', filters),
+  reviewSavAction: (data) => ipcRenderer.invoke('review-sav-action', data),
+  reviewSavActions: (data) => ipcRenderer.invoke('review-sav-actions', data),
+  undoSavAction: (data) => ipcRenderer.invoke('undo-sav-action', data),
+  savActionHistory: (data) => ipcRenderer.invoke('sav-action-history', data),
+  saveCorrection: (data) => ipcRenderer.invoke('save-correction', data),
+  getTabelasPreco: () => ipcRenderer.invoke('get-tabelas-preco'),
+  getConvenios: () => ipcRenderer.invoke('get-convenios'),
+  getSyncStatus: () => ipcRenderer.invoke('get-sync-status'),
+  performSync: (items, options) => ipcRenderer.invoke('perform-sync', items, options),
+  getDbStatus: () => ipcRenderer.invoke('get-db-status'),
+  getConfig: () => ipcRenderer.invoke('get-config'),
+  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
+  getSystemConfigs: () => ipcRenderer.invoke('get-system-configs'),
+  setSystemConfig: (c, v) => ipcRenderer.invoke('set-system-config', c, v),
+  getHealth: () => ipcRenderer.invoke('get-health'),
+  runReconciliation: () => ipcRenderer.invoke('run-reconciliation'),
+  openWhatsApp: (data) => ipcRenderer.invoke('open-whatsapp', data),
+  onNotificationReceived: (cb) => ipcRenderer.on('notification-received', (_, data) => cb(data)),
+  onNavigateTo: (cb) => ipcRenderer.on('navigate-to', (_, section) => cb(section))
+});

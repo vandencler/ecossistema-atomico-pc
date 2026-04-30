@@ -1,0 +1,42 @@
+{
+  "name": "ecossistema-atomico",
+  "version": "1.0.0",
+  "description": "Ecossistema Atômico de Vendas — Empório Natural",
+  "main": "main.js",
+  "scripts": {
+    "start": "set ELECTRON_RUN_AS_NODE=& electron .",
+    "dev": "set ELECTRON_RUN_AS_NODE=& electron . --dev",
+    "test": "node --test tests/*.test.js",
+    "lint": "eslint .",
+    "build": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.atomico.ecossistema",
+    "productName": "Ecossistema Atômico",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "installerLanguages": [
+        "pt_BR"
+      ]
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "proxyquire": "^2.1.3"
+  }
+}
