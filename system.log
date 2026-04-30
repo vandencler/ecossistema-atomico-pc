@@ -171,3 +171,12 @@
     at Test.postRun (node:internal/test_runner/test:1232:19)
     at Test.run (node:internal/test_runner/test:1160:12)
     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+[2026-04-30T15:57:15.537Z] [TEST] 1 | Detail
+[2026-04-30T15:57:15.555Z] [CONTEXT_ERROR] 123 | Error: Test Error
+    at TestContext.<anonymous> (D:\projetos\ecossistema-atomico-pc\tests\logging.test.js:52:21)
+    at Test.runInAsyncScope (node:async_hooks:214:14)
+    at Test.run (node:internal/test_runner/test:1103:25)
+    at Test.processPendingSubtests (node:internal/test_runner/test:785:18)
+    at Test.postRun (node:internal/test_runner/test:1232:19)
+    at Test.run (node:internal/test_runner/test:1160:12)
+    at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)

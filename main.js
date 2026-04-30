@@ -1,13 +1,14 @@
-const { pool, ecoPool, settings } = require('./src/main/db');
+﻿const { pool, ecoPool, settings } = require('./src/main/db');
 const { initLocalDb } = require('./src/main/localDb');
 const { logEvent, logError } = require('./src/main/services/logService');
-const { 
-  getDbStatus, 
-  getConfig, 
-  saveConfig, 
-  getSystemConfigs, 
-  setSystemConfig, 
-  getConfigValue 
+const {
+  getDbStatus,
+  getConfig,
+  saveConfig,
+  getSystemConfigs,
+  setSystemConfig,
+  getConfigValue,
+  validateConfig
 } = require('./src/main/services/configService');
 const { initializeDatabase } = require('./src/main/dbInit');
 const uiService = require('./src/main/services/uiService');
@@ -164,16 +165,16 @@ ipcMain.handle('open-whatsapp', safeInvoke((e, p) => uiService.openWhatsApp(p)))
 app.whenReady().then(async () => {
   // 1. Initial Checks
   await runPreFlight();
-  
+
   // 2. Local State
   initLocalDb(app.getPath('userData'));
-  
+
   // 3. UI
   createWindow();
-  
+
   // 4. Background Services
   await checkHealth();
-  
+
   // Start Auto-Sync based on hierarchy: File Settings > DB Settings > Default (10m)
   if (settings.autoSync) {
     startAutoSync(settings.syncInterval * 60000);
@@ -204,4 +205,3 @@ app.on('before-quit', async () => {
 });
 
 app.on('window-all-closed', () => app.quit());
-) => app.quit());
