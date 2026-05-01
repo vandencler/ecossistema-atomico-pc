@@ -54,6 +54,7 @@ test('searchClient - should use granular indexMap for % vs LIKE', async () => {
       isOfflineMode: async () => false,
       isSearchOptimized: async () => false,
       getIndexMap: async () => ({
+        'hasTrgmExtension': true,
         'idx_pessoas_nmpessoa_trgm': true,
         'idx_pessoas_nmcurto_trgm': false,
         'idx_pessoas_cdchamada_trgm': true,
@@ -70,13 +71,13 @@ test('searchClient - should use granular indexMap for % vs LIKE', async () => {
   await searchClient('joao');
 
   // nmpessoa has index, should use %
-  assert.ok(capturedSql.includes("LOWER(COALESCE(p.nmpessoa,'')) %"));
+  assert.ok(capturedSql.includes('LOWER(p.nmpessoa) %'));
   // nmcurto has NO index, should use LIKE
-  assert.ok(capturedSql.includes("LOWER(COALESCE(p.nmcurto,'')) LIKE"));
+  assert.ok(capturedSql.includes('LOWER(p.nmcurto) LIKE'));
   // cdchamada has index, should use %
-  assert.ok(capturedSql.includes("LOWER(COALESCE(p.cdchamada,'')) %"));
+  assert.ok(capturedSql.includes('LOWER(p.cdchamada) %'));
   // nrcgc_cic has NO index, should use LIKE
-  assert.ok(capturedSql.includes("LOWER(COALESCE(p.nrcgc_cic,'')) LIKE"));
+  assert.ok(capturedSql.includes('LOWER(p.nrcgc_cic) LIKE'));
   // phones has index, should use %
   assert.ok(capturedSql.includes("REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') %"));
 });

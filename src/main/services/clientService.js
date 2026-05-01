@@ -157,9 +157,22 @@ async function searchClient(query) {
     if (tokens.length === 0) return { rows: [] };
 
     const indexMap = await getIndexMap();
-    const fullQueryParam = `%${query.trim().toLowerCase()}%`;
-    const params = [fullQueryParam];
+    const hasTrgm = indexMap['hasTrgmExtension'] === true;
     
+    const queryTrimmed = query.trim();
+    const queryRaw = queryTrimmed.toLowerCase();
+    const fullQueryParam = `%${queryRaw}%`;
+
+    // Static parameters at fixed indices
+    const params = [
+      fullQueryParam, // $1
+      queryRaw,       // $2
+      queryTrimmed    // $3
+    ];
+    
+    const rawIdx = 2;
+    const trimIdx = 3;
+
     const conditions = tokens.map((token) => {
       const textParam = `%${token}%`;
       const fuzzyParam = token;
@@ -168,80 +181,79 @@ async function searchClient(query) {
 
       const subConditions = [];
 
-      // Sequential parameter indexing per token
+      // Sequential parameter indexing per token, starting after static params
       const addParam = (val) => {
-        params.push(val);
+        params.push(String(val));
         return `$${params.length}::text`;
       };
 
       // 1. Name matches (Indexed)
-      if (indexMap['idx_pessoas_nmpessoa_trgm']) {
-        subConditions.push(`LOWER(p.nmpessoa) % ${addParam(fuzzyParam)}`);
+      if (hasTrgm && indexMap['idx_pessoas_nmpessoa_trgm']) {
+        subConditions.push(`p.nmpessoa % ${addParam(fuzzyParam)}`);
       } else {
         subConditions.push(`LOWER(p.nmpessoa) LIKE ${addParam(textParam)}`);
       }
 
       // 2. Short name / Nickname (Indexed)
-      if (indexMap['idx_pessoas_nmcurto_trgm']) {
-        subConditions.push(`LOWER(p.nmcurto) % ${addParam(fuzzyParam)}`);
-        subConditions.push(`LOWER(p.nmfantasia) % ${addParam(fuzzyParam)}`);
+      if (hasTrgm && indexMap['idx_pessoas_nmcurto_trgm']) {
+        subConditions.push(`p.nmcurto % ${addParam(fuzzyParam)}`);
+        subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParam)}`);
       } else {
         subConditions.push(`LOWER(p.nmcurto) LIKE ${addParam(textParam)}`);
         subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParam)}`);
       }
 
-      // 3. Call code (Indexed)
-      if (indexMap['idx_pessoas_cdchamada_trgm']) {
+      // 3. Call code (Indexed - this one IS using LOWER in the Mirror)
+      if (hasTrgm && indexMap['idx_pessoas_cdchamada_trgm']) {
         subConditions.push(`LOWER(p.cdchamada) % ${addParam(fuzzyParam)}`);
       } else {
         subConditions.push(`LOWER(p.cdchamada) LIKE ${addParam(textParam)}`);
       }
 
       // 4. Document / CNPJ (Indexed)
-      if (indexMap['idx_pessoas_nrcgc_cic_trgm']) {
-        subConditions.push(`LOWER(p.nrcgc_cic) % ${addParam(fuzzyParam)}`);
+      if (hasTrgm && indexMap['idx_pessoas_nrcgc_cic_trgm']) {
+        subConditions.push(`p.nrcgc_cic % ${addParam(fuzzyParam)}`);
       } else {
         subConditions.push(`LOWER(p.nrcgc_cic) LIKE ${addParam(textParam)}`);
       }
 
       // 5. Phones (Indexed split)
-      if (indexMap['idx_pessoas_telwa_trgm'] || indexMap['idx_pessoas_phones_trgm']) {
+      if (hasTrgm && (indexMap['idx_pessoas_telwa_trgm'] || indexMap['idx_pessoas_phones_trgm'])) {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
       } else {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${addParam(digitParam)}`);
       }
 
-      if (indexMap['idx_pessoas_phone_trgm'] || indexMap['idx_pessoas_phones_trgm']) {
+      if (hasTrgm && (indexMap['idx_pessoas_phone_trgm'] || indexMap['idx_pessoas_phones_trgm'])) {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
       } else {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${addParam(digitParam)}`);
       }
 
       // 6. Generic fields (Non-indexed, use LIKE)
-      const tp = addParam(textParam);
-      subConditions.push(`LOWER(p.nrincrest_rg) LIKE ${tp}`);
-      subConditions.push(`LOWER(p.email) LIKE ${tp}`);
-      subConditions.push(`LOWER(p.email2) LIKE ${tp}`);
-      subConditions.push(`LOWER(p.inscest_pfisica) LIKE ${tp}`);
-      subConditions.push(`TO_CHAR(cr.dtdatanasc, 'DD/MM/YYYY') LIKE ${tp}`);
+      // FIX EAV-83: Only include non-indexed fields if Trigram is disabled. 
+      // Mixing them with OR forces a Seq Scan, ruining performance.
+      if (!hasTrgm) {
+        const tp = addParam(textParam);
+        subConditions.push(`LOWER(p.nrincrest_rg) LIKE ${tp}`);
+        subConditions.push(`LOWER(p.email) LIKE ${tp}`);
+        subConditions.push(`LOWER(p.email2) LIKE ${tp}`);
+        subConditions.push(`LOWER(p.inscest_pfisica) LIKE ${tp}`);
+        subConditions.push(`TO_CHAR(cr.dtdatanasc, 'DD/MM/YYYY') LIKE ${tp}`);
 
-      if (token.length > 2) {
-        subConditions.push(`LOWER(COALESCE(p.nmendereco,'')) LIKE ${tp}`);
-        subConditions.push(`LOWER(COALESCE(p.nmbairro,'')) LIKE ${tp}`);
-        subConditions.push(`LOWER(COALESCE(p.nmcidade,'')) LIKE ${tp}`);
+        if (token.length > 2) {
+          subConditions.push(`LOWER(COALESCE(p.nmendereco,'')) LIKE ${tp}`);
+          subConditions.push(`LOWER(COALESCE(p.nmbairro,'')) LIKE ${tp}`);
+          subConditions.push(`LOWER(COALESCE(p.nmcidade,'')) LIKE ${tp}`);
+        }
       }
 
       return `(${subConditions.join(' OR ')})`;
     });
 
-    const queryRaw = query.trim().toLowerCase();
-    const queryTrimmed = query.trim();
-
-    params.push(queryRaw);
-    const rawIdx = params.length;
-    
-    params.push(queryTrimmed);
-    const trimIdx = params.length;
+    const scoreColumn = hasTrgm 
+      ? `similarity(LOWER(p.nmpessoa), $${rawIdx}::text) as score`
+      : `0 as score`;
 
     const sql = `
       SELECT p.idpessoa, p.cdchamada, p.nmpessoa, p.nmcurto, p.nrcgc_cic,
@@ -250,7 +262,7 @@ async function searchClient(query) {
              p.dtcadastro, p.dtultimacompra, p.aldesconto,
              t.dstabela AS tabela_preco,
              cr.dtdatanasc, cr.sexo,
-             similarity(LOWER(p.nmpessoa), $${rawIdx}::text) as score
+             ${scoreColumn}
       FROM wshop.pessoas p
       LEFT JOIN wshop.tabelaprecos t ON p.idtabela = t.idtabela
       LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
@@ -275,6 +287,7 @@ async function searchClient(query) {
     return { error: e.message };
   }
 }
+
 
 async function getBirthdayCustomers() {
   try {
@@ -542,6 +555,11 @@ async function getRecommendations(rawIdPessoa) {
   let idpessoa = '0';
   try {
     idpessoa = normalizeId(rawIdPessoa, 'idpessoa');
+
+    if (await isOfflineMode()) {
+      console.log('[CLIENT] Recomendacoes em modo offline nao disponiveis.');
+      return { rows: [] };
+    }
     
     // 1. Fetch ML Recommendations (Affinity)
     const mlRecs = await intel.getProductRecommendations(idpessoa, 5);
@@ -567,45 +585,41 @@ async function getRecommendations(rawIdPessoa) {
       });
     }
 
-    // 2. Fetch Heuristic Recommendations (Collaborative Filtering)
+    // 2. Fetch Heuristic Recommendations (Optimized Collaborative Filtering)
+    // We limit to recent purchases and highly similar groups to avoid full scans.
     const heuristicResult = await pool.query(`
-      WITH my_products AS (
+      WITH recent_docs AS (
+        SELECT iddocumento FROM wshop.documen 
+        WHERE idpessoa = $1 AND tpoperacao = 'V'
+          AND (stdocumentocancelado IS NULL OR stdocumentocancelado != 'S')
+        ORDER BY dtemissao DESC LIMIT 5
+      ),
+      my_products AS (
         SELECT DISTINCT di.idproduto, pr.idgrupo
         FROM wshop.docitem di
-        JOIN wshop.documen d ON d.iddocumento = di.iddocumento
+        JOIN recent_docs rd ON rd.iddocumento = di.iddocumento
         JOIN wshop.produto pr ON pr.idproduto = di.idproduto
-        WHERE di.idpessoa = $1 AND d.tpoperacao = 'V'
-          AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-      ),
-      my_groups AS (
-        SELECT idgrupo, COUNT(*) as weight
-        FROM my_products
-        GROUP BY idgrupo
       ),
       similar_customers AS (
-        SELECT DISTINCT di2.idpessoa
+        SELECT DISTINCT d2.idpessoa
         FROM wshop.docitem di2
         JOIN wshop.documen d2 ON d2.iddocumento = di2.iddocumento
         WHERE di2.idproduto IN (SELECT idproduto FROM my_products)
-          AND di2.idpessoa != $1 AND d2.tpoperacao = 'V'
-          AND (d2.stdocumentocancelado IS NULL OR d2.stdocumentocancelado != 'S')
-        LIMIT 100
+          AND d2.idpessoa != $1
+        LIMIT 20
       )
       SELECT pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo,
-             COUNT(DISTINCT di.idpessoa) AS clientes_similares,
-             SUM(di.qtitem) AS qtd_vendida,
-             COALESCE(mg.weight, 0) as group_affinity
+             COUNT(DISTINCT d.idpessoa) AS clientes_similares,
+             SUM(di.qtitem) AS qtd_vendida
       FROM wshop.docitem di
       JOIN wshop.produto pr ON pr.idproduto = di.idproduto
       LEFT JOIN wshop.grupo g ON g.idgrupo = pr.idgrupo
       JOIN wshop.documen d ON d.iddocumento = di.iddocumento
-      LEFT JOIN my_groups mg ON mg.idgrupo = pr.idgrupo
-      WHERE di.idpessoa IN (SELECT idpessoa FROM similar_customers)
+      WHERE d.idpessoa IN (SELECT idpessoa FROM similar_customers)
         AND di.idproduto NOT IN (SELECT idproduto FROM my_products)
-        AND d.tpoperacao = 'V'
-        AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-      GROUP BY pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo, mg.weight
-      ORDER BY group_affinity DESC, clientes_similares DESC, qtd_vendida DESC
+        AND pr.idgrupo IN (SELECT idgrupo FROM my_products) -- Focus on same categories
+      GROUP BY pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo
+      ORDER BY clientes_similares DESC, qtd_vendida DESC
       LIMIT 10
     `, [idpessoa]);
 

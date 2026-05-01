@@ -17,6 +17,10 @@ async function checkHealth() {
     const start = Date.now();
     await pool.query('SELECT 1');
     
+    // Check if pg_trgm extension is installed
+    const trgmCheck = await pool.query("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'");
+    const hasTrgmExtension = trgmCheck.rows.length > 0;
+
     // Check for Trigram Indexes durability on multiple high-traffic fields
     // We check explicitly for the 'wshop' schema as it's the standard for Alterdata Mirror
     const indexCheck = await pool.query(`
@@ -48,30 +52,35 @@ async function checkHealth() {
     const phonesOptimized = foundIndexes.includes('idx_pessoas_phones_trgm') || 
                            (foundIndexes.includes('idx_pessoas_telwa_trgm') && foundIndexes.includes('idx_pessoas_phone_trgm'));
 
-    const optimized = requiredIndexes.filter(idx => idx !== 'idx_pessoas_phones_trgm')
+    const optimized = hasTrgmExtension && 
+                     requiredIndexes.filter(idx => idx !== 'idx_pessoas_phones_trgm')
                                     .every(idx => foundIndexes.includes(idx)) && phonesOptimized;
 
     health.databases.mirror = { 
       status: foundIndexes.length > 0 ? 'OK' : 'OK_BUT_UNOPTIMIZED', 
       latencyMs: Date.now() - start,
       indexesOptimized: optimized,
+      hasTrgmExtension,
       indexMap: {
         ...requiredIndexes.reduce((map, idx) => {
           map[idx] = foundIndexes.includes(idx);
           return map;
         }, {}),
         'idx_pessoas_telwa_trgm': foundIndexes.includes('idx_pessoas_telwa_trgm'),
-        'idx_pessoas_phone_trgm': foundIndexes.includes('idx_pessoas_phone_trgm')
+        'idx_pessoas_phone_trgm': foundIndexes.includes('idx_pessoas_phone_trgm'),
+        'hasTrgmExtension': hasTrgmExtension
       },
       foundIndexes,
       missingIndexes: [
+        ...(hasTrgmExtension ? [] : ['pg_trgm_extension']),
         ...requiredIndexes.filter(idx => idx !== 'idx_pessoas_phones_trgm' && !foundIndexes.includes(idx)),
         ...(!phonesOptimized ? ['idx_pessoas_telwa_trgm', 'idx_pessoas_phone_trgm'] : [])
       ]
     };
 
     if (!optimized) {
-      console.warn(`[HEALTH] Mirror indexes missing: ${health.databases.mirror.missingIndexes.join(', ')}`);
+      health.status = 'DEGRADED';
+      console.warn(`[HEALTH] Mirror optimization issues: ${health.databases.mirror.missingIndexes.join(', ')}`);
     }
   } catch (e) {
     health.status = 'DEGRADED';
