@@ -57,6 +57,26 @@ class IntelligenceService {
   }
 
   /**
+   * Fetches recent WhatsApp engagement metrics.
+   */
+  async _getWhatsAppEngagement(idpessoa) {
+    try {
+      const res = await ecoPool.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE direcao = 'INBOUND') as inbound_count,
+          COUNT(*) FILTER (WHERE direcao = 'OUTBOUND') as outbound_count,
+          MAX(criado_em) as last_interaction
+        FROM omnichannel_mensagens
+        WHERE idpessoa = $1 AND criado_em > CURRENT_TIMESTAMP - INTERVAL '7 days'
+      `, [idpessoa]);
+      return res.rows[0] || { inbound_count: 0, outbound_count: 0, last_interaction: null };
+    } catch (e) {
+      console.warn('[INTEL] Failed to fetch WhatsApp engagement:', e.message);
+      return { inbound_count: 0, outbound_count: 0, last_interaction: null };
+    }
+  }
+
+  /**
    * Calculates the priority score for a client action.
    * @param {Object} data - Client and action data.
    * @returns {number} - Priority score (0-100).
@@ -94,7 +114,13 @@ class IntelligenceService {
     const ageBonus = Math.min(aConfig.maxPoints, Math.floor(hoursSince(data.criado_em) / 24) * aConfig.pointsPerDay);
     score += ageBonus;
 
-    // 6. Churn Risk (Predictive Penalty/Bonus - ML Phase 2)
+    // 6. WhatsApp Engagement (New: Phase 6)
+    const waEngagement = await this._getWhatsAppEngagement(data.idpessoa);
+    const waConfig = this.config.whatsappBonus || { inbound: 15, outbound: 5 };
+    if (parseInt(waEngagement.inbound_count) > 0) score += waConfig.inbound;
+    else if (parseInt(waEngagement.outbound_count) > 0) score += waConfig.outbound;
+
+    // 7. Churn Risk (Predictive Penalty/Bonus - ML Phase 2)
     const mlRisk = await this._getMLScores(data.idpessoa);
     const mConfig = this.config.mlRisk || { minConfidence: 60, multiplier: 0.2 };
     const dConfig = this.config.driftBonus || { multiplier: 1.3, bonus: 15 };

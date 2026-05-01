@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+const { pool, ecoPool } = require('../db');
 const { logEvent, logError } = require('./logService');
 const { trackEvent } = require('./telemetryService');
 const { getConfigValue } = require('./configService');
@@ -59,6 +59,34 @@ class OmnichannelService {
   }
 
   /**
+   * Internal method to record an omnichannel interaction in the database.
+   */
+  async _recordInteraction(idpessoa, direcao, conteudo, status, external_id = null) {
+    try {
+      // USANDO ecoPool para o banco ECOSSISTEMA_ATOMICO (Escrita permitida)
+      await ecoPool.query(`
+        INSERT INTO omnichannel_mensagens (idpessoa, direcao, conteudo, status, external_id)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [idpessoa, direcao, conteudo, status, external_id]);
+      
+      // Update last interaction and engagement score in enriched client data
+      const engagementBoost = direcao === 'INBOUND' ? 5.00 : 0.00;
+
+      await ecoPool.query(`
+        INSERT INTO clientes_enriquecidos (idpessoa, ultima_interacao, canal_preferido, score_engajamento)
+        VALUES ($1, CURRENT_TIMESTAMP, 'WHATSAPP', $2)
+        ON CONFLICT (idpessoa) DO UPDATE SET 
+          ultima_interacao = EXCLUDED.ultima_interacao,
+          canal_preferido = EXCLUDED.canal_preferido,
+          score_engajamento = LEAST(100.00, clientes_enriquecidos.score_engajamento + EXCLUDED.score_engajamento)
+      `, [idpessoa, engagementBoost]);
+
+    } catch (e) {
+      console.error('[OMNI] Failed to record interaction:', e.message);
+    }
+  }
+
+  /**
    * Dispatches a WhatsApp message via the Business API.
    * @param {string} idpessoa - Client ID.
    * @param {string} message - Message body.
@@ -99,17 +127,33 @@ class OmnichannelService {
       console.log(`[OMNI] Mocking WhatsApp Business API Dispatch to ${phone} (URL: ${apiUrl}): ${message}`);
       
       // Real implementation would use fetch(apiUrl, { headers: { 'Authorization': `Bearer ${apiToken}` ... } })
+      const mockExternalId = `wa_msg_${Date.now()}`;
 
-      // Log success and track telemetry
+      // Log success, record interaction and track telemetry
       await logEvent('OMNI_WA_SENT', idpessoa, `Notificacao enviada para ${phone}.`);
+      await this._recordInteraction(idpessoa, 'OUTBOUND', message, 'SENT', mockExternalId);
       await trackEvent('whatsapp_api_dispatch', idpessoa, { phone_prefix: phone.substring(0, 4) });
 
-      return { ok: true, phone };
+      return { ok: true, phone, externalId: mockExternalId };
     } catch (e) {
       await logError('OMNI_WA_API', e, idpessoa);
       return { ok: false, error: e.message };
     }
   }
+
+  /**
+   * Ingests an inbound message from WhatsApp (Webhook endpoint).
+   */
+  async ingestInboundMessage(idpessoa, content, externalId) {
+    console.log(`[OMNI] Ingesting Inbound Message from ${idpessoa}: ${content}`);
+    
+    await this._recordInteraction(idpessoa, 'INBOUND', content, 'RECEIVED', externalId);
+    await logEvent('OMNI_WA_RECEIVED', idpessoa, 'Mensagem recebida via WhatsApp.');
+    await trackEvent('whatsapp_api_inbound', idpessoa, { length: content.length });
+
+    return { ok: true };
+  }
+
 
   /**
    * Domain Logic: Notify client that their registration update was approved.

@@ -24,6 +24,10 @@
     "pointsPerDay": 1,
     "maxPoints": 20
   },
+  "whatsappBonus": {
+    "inbound": 15,
+    "outbound": 5
+  },
   "mlRisk": {
     "minConfidence": 60,
     "multiplier": 0.2

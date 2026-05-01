@@ -204,6 +204,21 @@ CREATE TABLE IF NOT EXISTS clientes_enriquecidos (
     atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table for tracking Omnichannel Interactions
+CREATE TABLE IF NOT EXISTS omnichannel_mensagens (
+    id SERIAL PRIMARY KEY,
+    idpessoa VARCHAR(40) NOT NULL,
+    direcao VARCHAR(10) NOT NULL, -- INBOUND, OUTBOUND
+    canal VARCHAR(20) DEFAULT 'WHATSAPP',
+    conteudo TEXT,
+    status VARCHAR(20), -- SENT, DELIVERED, READ, RECEIVED, ERROR
+    external_id VARCHAR(100),
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_omni_mensagens_pessoa ON omnichannel_mensagens(idpessoa);
+CREATE INDEX IF NOT EXISTS idx_omni_mensagens_criado ON omnichannel_mensagens(criado_em);
+
 -- Cache for client ranking to avoid heavy on-the-fly calculations
 CREATE TABLE IF NOT EXISTS ranking_cache (
     idpessoa VARCHAR(40) PRIMARY KEY,
