@@ -184,7 +184,7 @@ async function searchClient(query) {
       // Sequential parameter indexing per token, starting after static params
       const addParam = (val) => {
         params.push(String(val));
-        return `$${params.length}::text`;
+        return '$' + params.length + '::text';
       };
 
       // 1. Name matches (Indexed)
