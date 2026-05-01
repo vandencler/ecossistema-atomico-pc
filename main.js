@@ -80,6 +80,7 @@ function createWindow() {
   const { x, y, w, h } = uiService.getScreenEdge();
 
   const mainWindow = new BrowserWindow({
+    title: 'Sistema Atomico de Vendas',
     width: uiService.SIDEBAR_WIDTH,
     height: h,
     x: x + w - uiService.SIDEBAR_WIDTH,

@@ -16,7 +16,7 @@
   "author": "Emporio Natural",
   "build": {
     "appId": "com.atomico.ecossistema",
-    "productName": "Ecossistema Atomico",
+    "productName": "Sistema Atomico de Vendas",
     "copyright": "Copyright 2026 Emporio Natural",
     "directories": {
       "output": "dist"
