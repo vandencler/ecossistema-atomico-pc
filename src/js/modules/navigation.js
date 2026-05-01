@@ -3,6 +3,7 @@ import { loadBirthdayModule } from '../ui/aniversarios.js';
 import { loadSavQueue } from '../ui/sav.js';
 import { loadSyncModule } from '../ui/sync.js';
 import { loadConfigModule } from '../ui/config.js';
+import { loadHealthModule } from '../ui/health.js';
 import { api } from '../api.js';
 
 let currentCallbacks = {};
@@ -22,6 +23,7 @@ export function setupNavigation(callbacks) {
   $('birthday-refresh')?.addEventListener('click', () => loadBirthdayModule(onOpenClient));
   $('sav-refresh')?.addEventListener('click', () => loadSavQueue(onOpenClient, onOpenWhatsApp));
   $('sync-refresh')?.addEventListener('click', () => loadSyncModule());
+  $('health-refresh')?.addEventListener('click', () => loadHealthModule());
 }
 
 export function navigateTo(moduleName) {
@@ -64,6 +66,7 @@ export function switchModule(name, onOpenClient, onOpenWhatsApp) {
   if (name === 'sav') loadSavQueue(onOpenClient, onOpenWhatsApp);
   if (name === 'sync') loadSyncModule();
   if (name === 'config') loadConfigModule();
+  if (name === 'health') loadHealthModule();
 }
 
 export function switchTab(name, sourceButton) {

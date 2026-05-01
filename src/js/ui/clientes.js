@@ -1,7 +1,7 @@
-import { $, create, setChildren, textValue, phoneDisplay, fmtDate, fmtMoney, parseDateParts, rawDate, validPhoneDigits, stateMessage, badge } from '../utils.js';
+import { $, create, setChildren, textValue, phoneDisplay, fmtDate, fmtMoney, parseDateParts, rawDate, stateMessage, toast } from '../utils.js';
 import { api } from '../api.js';
+import { StatusBadge, MetricCard, ActionGroup, IconButton, renderPurchaseRow } from './components.js';
 
-const HEADER_FIELDS = new Set(['nmpessoa', 'nmcurto', 'nrpager', 'nrtelefone', 'campostelwhatsapp', 'email', 'dtdatanasc', 'sexo', 'idtabela']);
 const FIELD_STATUS_LABELS = {
   PENDENTE: 'SAV: Pendente',
   APROVADO: 'SAV: Aprovado',
@@ -37,7 +37,19 @@ export function renderClientHeader(profile, rank, onBack, priority) {
   const abc = textValue(rank?.abc, '-').toUpperCase();
 
   const children = [
-    create('button', { className: 'ch-back', type: 'button', text: '< Voltar a busca', onClick: onBack }),
+    ActionGroup([
+      IconButton('< Voltar a busca', onBack, { className: 'ch-back' }),
+      IconButton('PDF', async () => {
+        const res = await api.exportClientData(profile.idpessoa, 'pdf');
+        if (res.error) toast(`Erro: ${res.error}`, 'error');
+        else if (!res.canceled) toast('PDF gerado com sucesso!', 'success');
+      }, { className: 'ch-export-btn' }),
+      IconButton('Excel', async () => {
+        const res = await api.exportClientData(profile.idpessoa, 'excel');
+        if (res.error) toast(`Erro: ${res.error}`, 'error');
+        else if (!res.canceled) toast('Excel gerado com sucesso!', 'success');
+      }, { className: 'ch-export-btn' })
+    ], { className: 'ch-actions' }),
     create('div', { className: 'ch-name', text: textValue(profile.nmpessoa, 'Cliente sem nome') })
   ];
 
@@ -49,14 +61,14 @@ export function renderClientHeader(profile, rank, onBack, priority) {
   }
 
   const badges = [];
-  if (profile.sttipopessoa === 'C') badges.push(badge('Cliente', 'badge-cliente'));
-  if (profile.sttipopessoa === 'F') badges.push(badge('Fornecedor', 'badge-fornecedor'));
-  badges.push(badge(`ABC: ${abc} #${textValue(rank?.posicao)}/${textValue(rank?.total_clientes)}`, `badge-abc-${abc.toLowerCase()}`));
+  if (profile.sttipopessoa === 'C') badges.push(StatusBadge('Cliente', { type: 'success' }));
+  if (profile.sttipopessoa === 'F') badges.push(StatusBadge('Fornecedor', { type: 'info' }));
+  badges.push(StatusBadge(`ABC: ${abc} #${textValue(rank?.posicao)}/${textValue(rank?.total_clientes)}`, { type: 'info' }));
   if (priority?.score) {
-    const scoreColor = priority.score >= 80 ? 'badge-high' : priority.score >= 60 ? 'badge-med' : 'badge-low';
-    badges.push(badge(`Prioridade: ${priority.score}`, scoreColor));
+    const scoreType = priority.score >= 80 ? 'error' : priority.score >= 60 ? 'warn' : 'info';
+    badges.push(StatusBadge(`Prioridade: ${priority.score}`, { type: scoreType }));
   }
-  if (profile.sexo) badges.push(badge(profile.sexo, 'badge-info'));
+  if (profile.sexo) badges.push(StatusBadge(profile.sexo, { type: 'info' }));
   children.push(create('div', { className: 'ch-badges' }, badges));
 
   if (priority?.insights?.length > 0) {
@@ -82,20 +94,15 @@ export function renderClientHeader(profile, rank, onBack, priority) {
 export function renderClientStats(stats, rank, profile) {
   const birthday = getBirthdayStatus(profile?.dtdatanasc);
   const freq = stats.freq_dias > 0 ? `A cada ${Math.round(stats.freq_dias)} dias` : '-';
+  
   const cards = [
-    ['Lifetime', `R$ ${fmtMoney(stats.valor_lifetime)}`, `${stats.total_compras || 0} compras`, 'green'],
-    ['Ticket Medio', `R$ ${fmtMoney(stats.ticket_medio)}`, '', 'cyan'],
-    ['Frequencia', freq, '', 'purple'],
-    ['Idade hoje', birthday.age !== null ? String(birthday.age) : '-', birthday.age !== null ? 'anos' : '', 'orange']
+    MetricCard('Lifetime', `R$ ${fmtMoney(stats.valor_lifetime)}`, { subValue: `${stats.total_compras || 0} compras`, type: 'success' }),
+    MetricCard('Ticket Medio', `R$ ${fmtMoney(stats.ticket_medio)}`, { type: 'info' }),
+    MetricCard('Frequencia', freq, { type: 'info' }),
+    MetricCard('Idade hoje', birthday.age !== null ? String(birthday.age) : '-', { subValue: birthday.age !== null ? 'anos' : '', type: 'warn' })
   ];
 
-  setChildren($('client-stats'), cards.map(([label, value, sub, tone]) => (
-    create('div', { className: 'cs-card' }, [
-      create('div', { className: 'cs-label', text: label }),
-      create('div', { className: `cs-value ${tone}`, text: value }),
-      create('div', { className: 'cs-sub', text: sub })
-    ])
-  )));
+  setChildren($('client-stats'), cards);
 }
 
 export function renderPurchases(rows) {
@@ -104,11 +111,7 @@ export function renderPurchases(rows) {
     return;
   }
 
-  setChildren($('tab-compras'), rows.map((row) => create('div', { className: 'purchase-row' }, [
-    create('span', { className: 'pr-date', text: fmtDate(row.dtemissao) }),
-    create('span', { className: 'pr-nf', text: row.nrnotafiscal ? `NF ${row.nrnotafiscal}` : '' }),
-    create('span', { className: 'pr-value', text: `R$ ${fmtMoney(row.vltotal)}` })
-  ])));
+  setChildren($('tab-compras'), rows.map(renderPurchaseRow));
 }
 
 export function renderTopProducts(rows) {
@@ -140,13 +143,20 @@ export async function loadRecommendations(id) {
     return;
   }
 
-  setChildren(target, rows.map((row) => create('div', { className: 'rec-row' }, [
-    create('div', { className: 'rec-name', text: textValue(row.nmproduto) }),
-    create('div', {
-      className: 'rec-reason',
-      text: `${textValue(row.nmgrupo, 'Sem grupo')} - ${row.clientes_similares || 0} clientes similares compraram`
-    })
-  ])));
+  setChildren(target, rows.map((row) => {
+    let reasonText = `${textValue(row.nmgrupo, 'Sem grupo')}`;
+    if (row.source === 'ML') {
+      const mlLabel = row.reason === 'HIGH_HISTORICAL_VOLUME' ? 'Alta recorrência histórica' : 'Afinidade preditiva';
+      reasonText += ` - ${mlLabel} ✨`;
+    } else {
+      reasonText += ` - ${row.clientes_similares || 0} clientes similares compraram`;
+    }
+
+    return create('div', { className: `rec-row rec-source-${(row.source || 'heuristic').toLowerCase()}` }, [
+      create('div', { className: 'rec-name', text: textValue(row.nmproduto) }),
+      create('div', { className: 'rec-reason', text: reasonText })
+    ]);
+  }));
 }
 
 function cadastroFields(profile, corrections) {
@@ -197,10 +207,9 @@ export function renderCadastro(profile, corrections = {}, actionStatus = {}) {
     }
 
     if (status) {
-      valueChildren.push(create('span', {
-        className: `field-status field-status-${status.toLowerCase()}`,
-        title: actionStatus[item.field]?.erro_msg || '',
-        text: FIELD_STATUS_LABELS[status] || status
+      valueChildren.push(StatusBadge(FIELD_STATUS_LABELS[status] || status, {
+        type: status.toLowerCase(),
+        title: actionStatus[item.field]?.erro_msg || ''
       }));
     }
 

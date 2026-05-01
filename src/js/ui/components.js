@@ -1,4 +1,4 @@
-import { create, badge as baseBadge, textValue, phoneDisplay, fmtDate } from '../utils.js';
+import { create, textValue, phoneDisplay, fmtDate } from '../utils.js';
 
 /**
  * UI Component Library
@@ -12,23 +12,100 @@ export function card(options = {}, children = []) {
   }, children);
 }
 
-export function badge(text, type = 'info') {
+/**
+ * Standardized metric box
+ * @param {string} label 
+ * @param {string|number} value 
+ * @param {object} options { type: 'success'|'warn'|'info'|'error', subValue: string }
+ */
+export function MetricCard(label, value, options = {}) {
+  const typeClass = options.type ? `metric-${options.type}` : '';
+  return create('div', { className: `metric-card ${typeClass}`.trim() }, [
+    create('div', { className: 'metric-label', text: label }),
+    create('div', { className: 'metric-value', text: value }),
+    options.subValue ? create('div', { className: 'metric-sub', text: options.subValue }) : null
+  ].filter(Boolean));
+}
+
+/**
+ * A robust, themed badge component.
+ * Replaces legacy badge implementation.
+ */
+export function StatusBadge(text, options = {}) {
+  const type = options.type || 'info';
   const typeMap = {
-    info: 'badge-info',
+    // Basic types
     success: 'badge-success',
+    warn: 'badge-warn',
     warning: 'badge-warn',
     error: 'badge-error',
-    priority: 'badge-priority'
+    info: 'badge-info',
+    priority: 'badge-priority',
+    // SAV Status types (rounded pills)
+    pendente: 'sav-status-pendente',
+    aprovado: 'sav-status-aprovado',
+    rejeitado: 'sav-status-rejeitado',
+    concluido: 'sav-status-concluido',
+    // SAV Chip types (border + color)
+    critical: 'sav-chip-critical',
+    high: 'sav-chip-high'
   };
-  return baseBadge(text, typeMap[type] || type);
+
+  const className = typeMap[type] || type;
+  
+  // Decide base class based on prefix or explicit type
+  let baseClass = 'result-badge';
+  if (type.startsWith('sav-status') || ['pendente', 'aprovado', 'rejeitado', 'concluido'].includes(type)) {
+    baseClass = 'sav-status';
+  } else if (type.startsWith('sav-chip') || ['critical', 'high'].includes(type)) {
+    baseClass = 'sav-chip';
+  }
+
+  return create('span', { 
+    className: `${baseClass} ${className}`.trim(), 
+    title: options.title,
+    text 
+  });
+}
+
+/**
+ * Flexbox container for buttons to ensure consistent spacing.
+ */
+export function ActionGroup(children, options = {}) {
+  return create('div', { className: `sav-actions ${options.className || ''}`.trim() }, children);
+}
+
+/**
+ * Standardized button component.
+ */
+export function IconButton(text, onClick, options = {}) {
+  return create('button', {
+    className: options.className || '',
+    type: options.type || 'button',
+    disabled: options.disabled,
+    title: options.title,
+    onClick
+  }, [text]);
+}
+
+/**
+ * Reusable component for comparing values.
+ */
+export function DiffBox(label, value, options = {}) {
+  return create('div', { 
+    className: `sav-diff-box ${options.highlight ? 'sav-diff-new' : ''}`.trim() 
+  }, [
+    create('span', { className: 'sav-diff-label', text: label }),
+    create('span', { className: 'sav-diff-value', text: textValue(value, 'vazio') })
+  ]);
 }
 
 export function renderSearchResult(row, onOpen) {
   const badges = [];
-  if (row.sttipopessoa === 'C') badges.push(badge('Cliente', 'success'));
-  if (row.sttipopessoa === 'F') badges.push(badge('Fornecedor', 'info'));
-  if (row.stvendedor) badges.push(badge('Vendedor', 'warning'));
-  if (row._source === 'cache') badges.push(badge('Cache', 'priority'));
+  if (row.sttipopessoa === 'C') badges.push(StatusBadge('Cliente', { type: 'success' }));
+  if (row.sttipopessoa === 'F') badges.push(StatusBadge('Fornecedor', { type: 'info' }));
+  if (row.stvendedor) badges.push(StatusBadge('Vendedor', { type: 'warning' }));
+  if (row._source === 'cache') badges.push(StatusBadge('Cache', { type: 'priority' }));
 
   const info = [
     row.nrcgc_cic ? `Doc: ${row.nrcgc_cic}` : '',

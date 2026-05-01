@@ -46,7 +46,7 @@ function normalizeDateInput(value) {
 }
 
 function normalizeFieldValue(config, value) {
-  let text = value == null ? '' : String(value).trim();
+  let text = (value === null || value === undefined) ? '' : String(value).trim();
   if (config.type === 'date') text = normalizeDateInput(text);
   if (config.type === 'uf') text = text.toUpperCase();
   if ((config.type === 'phone' || config.type === 'cep') && text) text = text.replace(/\D/g, '');
@@ -82,7 +82,7 @@ function normalizeCorrectionPayload(payload) {
       return {
         campo,
         tabelaOrigem,
-        valorOriginal: change.valorOriginal == null ? '' : String(change.valorOriginal),
+        valorOriginal: (change.valorOriginal === null || change.valorOriginal === undefined) ? '' : String(change.valorOriginal),
         valorNovo: normalizeFieldValue(config, change.valorNovo),
         enfileirar: change.enfileirar !== false && config.enqueue !== false
       };

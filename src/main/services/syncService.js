@@ -84,6 +84,12 @@ async function getSyncStatus() {
       LIMIT 100
     `, [ACTION_STATUS.APPROVED]);
 
+    const readyToExportResult = await ecoPool.query(`
+      SELECT COUNT(*) as count 
+      FROM acoes_pendentes 
+      WHERE status = $1 AND lote_id IS NULL
+    `, [ACTION_STATUS.DONE]);
+
     const items = await Promise.all(pending.rows.map(async (row) => {
       let target;
       try {
@@ -116,6 +122,7 @@ async function getSyncStatus() {
 
     return {
       totalPending: pending.rowCount,
+      readyToExport: parseInt(readyToExportResult.rows[0].count, 10),
       items
     };
   } catch (e) {
@@ -187,6 +194,20 @@ async function performSync(items, options = {}) {
           `, [action.idpessoa, action.campo]);
         });
 
+        // TRIGGER OMNICHANNEL NOTIFICATION
+        const omnichannel = require('./omnichannelService');
+        let overridePhone = null;
+        if (['campostelwhatsapp', 'nrtelefone'].includes(action.campo)) {
+          overridePhone = omnichannel.sanitizePhone(action.valor_novo);
+        }
+        
+        const validPhone = overridePhone || await omnichannel._getClientPhone(action.idpessoa);
+        if (validPhone) {
+          omnichannel.notifySavApproval(action.idpessoa, action.campo, overridePhone).catch(err => {
+            console.error(`[SYNC] Falha ao disparar notificacao WhatsApp para ID ${action.id}:`, err.message);
+          });
+        }
+
         syncedCount++;
         results.push({ id: action.id, status: 'SUCCESS', updateOnly: true, targetTable: target.tableName });
         await logEvent('SYNC_SUCCESS', action.idpessoa, `Campo ${action.campo} sincronizado via UPDATE: ${action.valor_novo}`, usuario);
@@ -197,6 +218,14 @@ async function performSync(items, options = {}) {
           targetTable: target.tableName
         });
       } catch (e) {
+        const isPermissionError = e.code === '42501' || String(e.message).toLowerCase().includes('permission denied');
+        
+        if (isPermissionError) {
+          console.warn(`[SYNC] Permission denied for action ${action.id} (Client: ${action.idpessoa}). Skipping...`);
+          results.push({ id: action.id, status: 'PERMISSION_DENIED', error: e.message });
+          continue;
+        }
+
         try {
           await withEcoTransaction((client) => markActionExecutionError(client, action.id, e, usuario));
         } catch (logErrorMsg) {
@@ -221,55 +250,140 @@ async function performSync(items, options = {}) {
   }
 }
 
+async function generateBatchScript() {
+  try {
+    const ready = await ecoPool.query(`
+      SELECT id, idpessoa, campo, valor_novo, nome_pessoa, status
+      FROM acoes_pendentes
+      WHERE status = $1 AND lote_id IS NULL
+      ORDER BY criado_em ASC
+    `, [ACTION_STATUS.DONE]);
+
+    if (ready.rowCount === 0) return { ok: true, sql: '-- Nenhum item sincronizado pendente de exportacao ERP.' };
+
+    let sql = `-- Lote de Correcao SAV - Gerado em ${new Date().toLocaleString()}\n`;
+    sql += `-- Total de itens: ${ready.rowCount}\n\n`;
+    sql += 'BEGIN;\n\n';
+
+    const ids = [];
+    for (const row of ready.rows) {
+      try {
+        const target = resolveSyncTarget(row.campo);
+        sql += `-- [Status: ${row.status}] Cliente: ${row.nome_pessoa} (${row.idpessoa})\n`;
+        sql += `UPDATE ${target.tableName} SET ${row.campo} = '${String(row.valor_novo).replace(/'/g, "''")}' WHERE idpessoa = '${row.idpessoa}';\n\n`;
+        ids.push(row.id);
+      } catch (e) {
+        sql += `-- ERRO no item ${row.id}: ${e.message}\n\n`;
+      }
+    }
+
+    sql += 'COMMIT;\n';
+
+    return { ok: true, sql, ids };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+async function markBatchAsExported(ids) {
+  if (!ids || ids.length === 0) return null;
+  
+  const res = await ecoPool.query(`
+    INSERT INTO lotes_execucao (executado_por, total_acoes, observacoes)
+    VALUES ($1, $2, $3)
+    RETURNING id
+  `, ['sistema-batch-export', ids.length, `Lote gerado para exportação ERP em ${new Date().toLocaleString()}`]);
+  
+  const loteId = res.rows[0].id;
+  await ecoPool.query('UPDATE acoes_pendentes SET lote_id = $1 WHERE id = ANY($2::int[])', [loteId, ids]);
+  return loteId;
+}
+
+let autoSyncTimer = null;
+let currentIntervalMs = 0;
+
+async function startAutoSync(forceIntervalMs = null) {
+  const { getConfigValue } = require('./configService');
+  const intervalMinutes = await getConfigValue('auto_sync_interval_minutes', '10');
+  const intervalMs = forceIntervalMs || (parseInt(intervalMinutes) * 60000);
+
+  if (autoSyncTimer && currentIntervalMs === intervalMs) return;
+  
+  stopAutoSync();
+  currentIntervalMs = intervalMs;
+  
+  console.log(`[SYNC] Iniciando worker de sincronização automática (${intervalMs}ms)`);
+  
+  const run = async () => {
+    try {
+      await reconcileLocalCorrections();
+      const status = await getSyncStatus();
+      const pending = status.items?.filter(item => item.needsSync);
+      if (pending && pending.length > 0) {
+        console.log(`[SYNC] Processando ${pending.length} itens automaticamente...`);
+        await performSync(pending);
+      }
+    } catch (e) {
+      console.error('[SYNC] Erro no worker automático:', e.message);
+    } finally {
+      const latestMinutes = await getConfigValue('auto_sync_interval_minutes', '10');
+      const latestMs = parseInt(latestMinutes) * 60000;
+      
+      if (latestMs !== currentIntervalMs) {
+        currentIntervalMs = latestMs;
+      }
+      
+      if (currentIntervalMs > 0) {
+        autoSyncTimer = setTimeout(run, currentIntervalMs);
+      }
+    }
+  };
+
+  run();
+}
+
+function stopAutoSync() {
+  if (autoSyncTimer) {
+    clearTimeout(autoSyncTimer);
+    autoSyncTimer = null;
+  }
+}
+
+async function setupRealTimeListener() {
+  try {
+    const client = await ecoPool.connect();
+    await client.query('LISTEN sav_approved');
+    console.log('[SYNC] Escutando eventos em tempo real (sav_approved)...');
+
+    client.on('notification', async (msg) => {
+      if (msg.channel === 'sav_approved') {
+        const actionId = parseInt(msg.payload, 10);
+        console.log(`[SYNC] Evento de aprovacao recebido em tempo real para ID: ${actionId}`);
+        try {
+          await performSync([actionId], { usuario: 'sistema-realtime' });
+        } catch (err) {
+          console.error(`[SYNC] Falha na sincronizacao em tempo real do ID ${actionId}:`, err.message);
+        }
+      }
+    });
+
+    client.on('error', (err) => {
+      console.error('[SYNC] Erro no listener em tempo real:', err.message);
+      client.release(err);
+      setTimeout(() => setupRealTimeListener(), 5000);
+    });
+
+  } catch (e) {
+    console.error('[SYNC] Falha ao configurar listener em tempo real:', e.message);
+  }
+}
+
 module.exports = {
   getSyncStatus,
   performSync,
-  
-  // Background Worker Logic
-  autoSyncTimer: null,
-  currentIntervalMs: 0,
-  
-  async startAutoSync(forceIntervalMs = null) {
-    const { getConfigValue } = require('./configService');
-    const intervalMinutes = await getConfigValue('auto_sync_interval_minutes', '10');
-    const intervalMs = forceIntervalMs || (parseInt(intervalMinutes) * 60000);
-
-    if (this.autoSyncTimer && this.currentIntervalMs === intervalMs) return;
-    
-    this.stopAutoSync();
-    this.currentIntervalMs = intervalMs;
-    
-    console.log(`[SYNC] Iniciando worker de sincronização automática (${intervalMs}ms)`);
-    this.autoSyncTimer = setInterval(async () => {
-      try {
-        // Step 1: Reconcile offline corrections first
-        await reconcileLocalCorrections();
-
-        // Step 2: Normal sync
-        const status = await this.getSyncStatus();
-        const pending = status.items?.filter(item => item.needsSync);
-        if (pending && pending.length > 0) {
-          console.log(`[SYNC] Processando ${pending.length} itens automaticamente...`);
-          await this.performSync(pending);
-        }
-        
-        // Re-check interval setting in case it changed in DB
-        const latestMinutes = await getConfigValue('auto_sync_interval_minutes', '10');
-        const latestMs = parseInt(latestMinutes) * 60000;
-        if (latestMs !== this.currentIntervalMs) {
-          console.log(`[SYNC] Detectada mudança no intervalo: ${this.currentIntervalMs} -> ${latestMs}`);
-          this.startAutoSync(latestMs);
-        }
-      } catch (e) {
-        console.error('[SYNC] Erro no worker automático:', e.message);
-      }
-    }, intervalMs);
-  },
-
-  stopAutoSync() {
-    if (this.autoSyncTimer) {
-      clearInterval(this.autoSyncTimer);
-      this.autoSyncTimer = null;
-    }
-  }
+  generateBatchScript,
+  markBatchAsExported,
+  startAutoSync,
+  stopAutoSync,
+  setupRealTimeListener
 };

@@ -12,22 +12,42 @@ const {
 } = require('./src/main/services/configService');
 const { initializeDatabase } = require('./src/main/dbInit');
 const uiService = require('./src/main/services/uiService');
-const { startAutoSync } = require('./src/main/services/syncService');
+const { startAutoSync, getSyncStatus, performSync, setupRealTimeListener, generateBatchScript, markBatchAsExported } = require('./src/main/services/syncService');
 const { checkHealth } = require('./src/main/services/healthService');
 const { warmUpCache } = require('./src/main/services/cacheService');
 const { reconcileCorrections } = require('./src/main/services/reconciliationService');
-const { flushTelemetry } = require('./src/main/services/telemetryService');
+const { flushTelemetry, trackEvent } = require('./src/main/services/telemetryService');
+const bulkIntelligenceService = require('./src/main/services/bulkIntelligenceService');
 
-const { app, BrowserWindow, screen, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 
 const { searchClient, getBirthdayCustomers, getClientDashboard, getRecommendations } = require('./src/main/services/clientService');
 const { saveCorrection } = require('./src/main/services/correctionService');
 const { getActionQueue, getActionHistory, reviewAction, reviewActions, undoActionReview } = require('./src/main/services/savService');
 const { getPriceTables, getConvenios } = require('./src/main/services/lookupService');
-const { getSyncStatus, performSync } = require('./src/main/services/syncService');
+const { exportClientData, bulkExportClients } = require('./src/main/services/exportService');
+const { dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 
 // --- Global Initialization ---
+
+// Auto-Updater Configuration
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on('update-available', () => {
+  logEvent('SYSTEM_UPDATE', '0', 'Atualizacao detectada. Iniciando download.');
+});
+
+autoUpdater.on('update-downloaded', () => {
+  logEvent('SYSTEM_UPDATE', '0', 'Download concluido. Instalacao na proxima inicializacao.');
+  // Optionally, we could prompt the user here using dialog.showMessageBox to restart immediately.
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('[UPDATER] Erro na verificacao de atualizacao:', err.message);
+});
 
 async function runPreFlight() {
   try {
@@ -58,7 +78,6 @@ async function runPreFlight() {
 
 function createWindow() {
   const { x, y, w, h } = uiService.getScreenEdge();
-  const tagY = y + Math.round(h * 0.25);
 
   const mainWindow = new BrowserWindow({
     width: uiService.SIDEBAR_WIDTH,
@@ -105,11 +124,21 @@ function createWindow() {
 // --- IPC Handlers with Validation ---
 
 const safeInvoke = (handler, validator = (x) => x) => async (event, ...args) => {
+  const start = Date.now();
+  const channel = event.sender.getURL().split('/').pop() + '::' + handler.name;
   try {
     const validatedArgs = args.map((arg, i) => validator(arg, i));
-    return await handler(event, ...validatedArgs);
+    const result = await handler(event, ...validatedArgs);
+    
+    // Performance Telemetry
+    const duration = Date.now() - start;
+    if (duration > 100) { // Only track slower calls to avoid noise
+      trackEvent('ipc_perf_low', 'sistema', { channel, duration_ms: duration }).catch(() => {});
+    }
+
+    return result;
   } catch (e) {
-    console.error(`[IPC ERROR] Handler failed:`, e.message);
+    console.error(`[IPC ERROR] ${channel} failed:`, e.message);
     return { error: `Invalid request: ${e.message}` };
   }
 };
@@ -149,6 +178,36 @@ ipcMain.handle('get-convenios', safeInvoke(() => getConvenios()));
 // Sync Domain
 ipcMain.handle('get-sync-status', safeInvoke(() => getSyncStatus()));
 ipcMain.handle('perform-sync', safeInvoke((e, items, options) => performSync(items, options || {})));
+ipcMain.handle('get-batch-sql', async () => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
+      title: 'Exportar Lote de Correção SQL',
+      defaultPath: `SAV_Batch_${new Date().toISOString().split('T')[0]}.sql`,
+      filters: [{ name: 'SQL Script', extensions: ['sql'] }]
+    });
+
+    if (canceled || !filePath) return { canceled: true };
+
+    const result = await generateBatchScript();
+    if (result.error) return result;
+
+    const fs = require('fs').promises;
+    await fs.writeFile(filePath, result.sql, 'utf8');
+    
+    // Mark items as exported in the database
+    if (result.ids && result.ids.length > 0) {
+      const loteId = await markBatchAsExported(result.ids);
+      await logEvent('SAV_BATCH_EXPORT', '0', `Script de lote ${loteId} exportado para: ${filePath} (${result.ids.length} itens)`);
+    } else {
+      await logEvent('SAV_BATCH_EXPORT', '0', `Script de lote vazio exportado para: ${filePath}`);
+    }
+
+    return { ok: true, filePath };
+  } catch (e) {
+    console.error('[IPC ERROR] Batch SQL export failed:', e.message);
+    return { error: e.message };
+  }
+});
 
 // System Domain
 ipcMain.handle('get-db-status', safeInvoke(() => getDbStatus()));
@@ -159,6 +218,72 @@ ipcMain.handle('set-system-config', safeInvoke((e, c, v) => setSystemConfig(c, v
 ipcMain.handle('get-health', safeInvoke(() => checkHealth()));
 ipcMain.handle('run-reconciliation', safeInvoke(() => reconcileCorrections()));
 ipcMain.handle('open-whatsapp', safeInvoke((e, p) => uiService.openWhatsApp(p)));
+
+ipcMain.handle('export-client-data', async (event, idpessoa, format) => {
+  try {
+    const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+    const filters = format === 'pdf' 
+      ? [{ name: 'PDF', extensions: ['pdf'] }] 
+      : [{ name: 'Excel', extensions: ['xlsx'] }];
+      
+    const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
+      title: 'Exportar Relatorio do Cliente',
+      defaultPath: `Cliente_${idpessoa}_${new Date().toISOString().split('T')[0]}.${ext}`,
+      filters
+    });
+
+    if (canceled || !filePath) return { canceled: true };
+
+    return await exportClientData(idpessoa, format, filePath);
+  } catch (e) {
+    console.error('[IPC ERROR] Export failed:', e.message);
+    return { error: e.message };
+  }
+});
+
+ipcMain.handle('bulk-export-clients', async (event, ids, format) => {
+  try {
+    const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+    const filters = format === 'pdf' 
+      ? [{ name: 'PDF', extensions: ['pdf'] }] 
+      : [{ name: 'Excel', extensions: ['xlsx'] }];
+      
+    const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
+      title: 'Exportar Relatorio em Lote',
+      defaultPath: `Lote_Clientes_${new Date().toISOString().split('T')[0]}.${ext}`,
+      filters
+    });
+
+    if (canceled || !filePath) return { canceled: true };
+
+    return await bulkExportClients(ids, format, filePath);
+  } catch (e) {
+    console.error('[IPC ERROR] Bulk Export failed:', e.message);
+    return { error: e.message };
+  }
+});
+
+ipcMain.handle('bulk-export-priority', async (event, priorityBucket, format) => {
+  try {
+    const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+    const filters = format === 'pdf' 
+      ? [{ name: 'PDF', extensions: ['pdf'] }] 
+      : [{ name: 'Excel', extensions: ['xlsx'] }];
+      
+    const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
+      title: `Exportar Prioridade ${priorityBucket.toUpperCase()}`,
+      defaultPath: `Prioridade_${priorityBucket}_${new Date().toISOString().split('T')[0]}.${ext}`,
+      filters
+    });
+
+    if (canceled || !filePath) return { canceled: true };
+
+    return await bulkExportByPriority(priorityBucket, format, filePath);
+  } catch (e) {
+    console.error('[IPC ERROR] Bulk Export Priority failed:', e.message);
+    return { error: e.message };
+  }
+});
 
 // --- Startup & Lifecycle ---
 
@@ -186,12 +311,25 @@ app.whenReady().then(async () => {
     }
   }
 
+  // 4b. Setup Real-Time Sync Listener
+  setupRealTimeListener();
+
   // 5. Periodic Maintenance
   warmUpCache();
   setInterval(() => warmUpCache(), 7200000); // 2h
   setInterval(() => checkHealth(), 1800000); // 30m
   setInterval(() => reconcileCorrections(), 43200000); // 12h
   setInterval(() => flushTelemetry(), 900000); // 15m
+  setInterval(() => bulkIntelligenceService.runSweep(), 21600000); // 6h
+
+  // 6. Check for OTA Updates and run initial sweep
+  setTimeout(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 10000); // Wait 10 seconds after boot to check for updates
+
+  setTimeout(() => {
+    bulkIntelligenceService.runSweep();
+  }, 30000); // Initial sweep 30s after ready
 });
 
 app.on('before-quit', async () => {

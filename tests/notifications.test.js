@@ -36,7 +36,7 @@ const notifier = proxyquire('../src/main/services/notificationService', {
   './uiService': mockUiService
 });
 
-test('NotificationService - notify', (t) => {
+test('NotificationService - notify', (_t) => {
   mockUiService.lastIpc = null;
   notifier.notify({ title: 'Test', body: 'Message', type: 'info' });
   
@@ -45,7 +45,7 @@ test('NotificationService - notify', (t) => {
   assert.strictEqual(mockUiService.lastIpc.data.body, 'Message');
 });
 
-test('NotificationService - notifyCriticalAction', (t) => {
+test('NotificationService - notifyCriticalAction', (_t) => {
   mockUiService.lastIpc = null;
   notifier.notifyCriticalAction({ nome_pessoa: 'John Doe', campo: 'email' });
   
@@ -54,7 +54,7 @@ test('NotificationService - notifyCriticalAction', (t) => {
   assert.ok(mockUiService.lastIpc.data.body.includes('email'));
 });
 
-test('NotificationService - notifyExecutionError', (t) => {
+test('NotificationService - notifyExecutionError', (_t) => {
   mockUiService.lastIpc = null;
   notifier.notifyExecutionError({ nome_pessoa: 'Jane Doe' }, 'Server error');
   

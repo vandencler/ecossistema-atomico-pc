@@ -2,33 +2,17 @@ const test = require('node:test');
 const assert = require('node:assert');
 const proxyquire = require('proxyquire');
 
+process.env.NODE_ENV = 'test';
+
 // Mocking dependencies
-const mockEcoPool = {
-  query: async () => ({ rows: [], rowCount: 0 }),
-  connect: async () => ({
-    query: async () => {},
-    release: () => {}
-  })
-};
-
-const mockPool = {
-  query: async () => ({ rows: [], rowCount: 0 }),
-  connect: async () => ({
-    query: async () => {},
-    release: () => {}
-  })
-};
-
-const { logEvent, logError } = proxyquire('../src/main/services/logService', {
-  '../db': { ecoPool: mockEcoPool }
-});
 
 test('logEvent - should not throw if DB query fails', async () => {
   const failingPool = {
     query: async () => { throw new Error('DB Down'); }
   };
   const { logEvent: failingLogEvent } = proxyquire('../src/main/services/logService', {
-    '../db': { ecoPool: failingPool }
+    '../db': { ecoPool: failingPool },
+    'fs': { appendFileSync: () => {} }
   });
 
   // Should not throw
@@ -46,7 +30,8 @@ test('logError - should format error stack', async () => {
     }
   };
   const { logError: capturingLogError } = proxyquire('../src/main/services/logService', {
-    '../db': { ecoPool: capturePool }
+    '../db': { ecoPool: capturePool },
+    'fs': { appendFileSync: () => {} }
   });
 
   const testError = new Error('Test Error');

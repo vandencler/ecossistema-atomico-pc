@@ -21,7 +21,7 @@ export function create(tag, options = {}, children = []) {
   if (options.hidden !== undefined) element.hidden = options.hidden;
   if (options.dataset) {
     Object.entries(options.dataset).forEach(([key, value]) => {
-      element.dataset[key] = value == null ? '' : String(value);
+      element.dataset[key] = (value === null || value === undefined) ? '' : String(value);
     });
   }
   if (options.attrs) {
@@ -56,6 +56,9 @@ export function stateMessage(text, type = '') {
   return create('div', { className: `state-message ${type}`.trim(), text });
 }
 
+/**
+ * @deprecated Use StatusBadge from components.js instead.
+ */
 export function badge(text, className = '') {
   return create('span', { className: `result-badge ${className}`.trim(), text });
 }
@@ -126,4 +129,38 @@ export function toast(message, type = 'info', duration = 3000) {
     el.classList.add('toast-out');
     setTimeout(() => el.remove(), 500);
   }, duration);
+}
+
+/**
+ * Custom prompt for Electron environment.
+ * Replaces window.prompt which is not supported.
+ */
+export async function showPrompt(message, defaultValue = '') {
+  return new Promise((resolve) => {
+    const overlay = create('div', { className: 'dialog-overlay' });
+    const dialog = create('div', { className: 'dialog-box' }, [
+      create('div', { className: 'dialog-message', text: message }),
+      create('input', { className: 'dialog-input', value: defaultValue, id: 'dialog-prompt-input' }),
+      create('div', { className: 'dialog-actions' }, [
+        create('button', { className: 'dialog-btn cancel', text: 'Cancelar', onClick: () => close(null) }),
+        create('button', { className: 'dialog-btn confirm', text: 'OK', onClick: () => close(document.getElementById('dialog-prompt-input').value) })
+      ])
+    ]);
+
+    function close(value) {
+      overlay.remove();
+      resolve(value);
+    }
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    const input = dialog.querySelector('input');
+    input.focus();
+    input.select();
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') close(input.value);
+      if (e.key === 'Escape') close(null);
+    });
+  });
 }

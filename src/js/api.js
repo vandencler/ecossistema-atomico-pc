@@ -18,6 +18,7 @@ export const api = {
   getConvenios: () => window.atomico.getConvenios(),
   getSyncStatus: () => window.atomico.getSyncStatus(),
   performSync: (items, options) => window.atomico.performSync(items, options),
+  getBatchSql: () => window.atomico.getBatchSql(),
   getDbStatus: () => window.atomico.getDbStatus(),
   getConfig: () => window.atomico.getConfig(),
   saveConfig: (config) => window.atomico.saveConfig(config),
@@ -26,6 +27,9 @@ export const api = {
   getHealth: () => window.atomico.getHealth(),
   runReconciliation: () => window.atomico.runReconciliation(),
   openWhatsApp: (data) => window.atomico.openWhatsApp(data),
+  exportClientData: (id, format) => window.atomico.exportClientData(id, format),
+  bulkExportClients: (ids, format) => window.atomico.bulkExportClients(ids, format),
+  bulkExportByPriority: (priorityBucket, format) => window.atomico.bulkExportByPriority(priorityBucket, format),
   onNotificationReceived: (cb) => window.atomico.onNotificationReceived(cb),
   onNavigateTo: (cb) => window.atomico.onNavigateTo(cb)
 };

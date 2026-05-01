@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('atomico', {
   getConvenios: () => ipcRenderer.invoke('get-convenios'),
   getSyncStatus: () => ipcRenderer.invoke('get-sync-status'),
   performSync: (items, options) => ipcRenderer.invoke('perform-sync', items, options),
+  getBatchSql: () => ipcRenderer.invoke('get-batch-sql'),
   getDbStatus: () => ipcRenderer.invoke('get-db-status'),
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
@@ -28,6 +29,9 @@ contextBridge.exposeInMainWorld('atomico', {
   getHealth: () => ipcRenderer.invoke('get-health'),
   runReconciliation: () => ipcRenderer.invoke('run-reconciliation'),
   openWhatsApp: (data) => ipcRenderer.invoke('open-whatsapp', data),
+  exportClientData: (id, format) => ipcRenderer.invoke('export-client-data', id, format),
+  bulkExportClients: (ids, format) => ipcRenderer.invoke('bulk-export-clients', ids, format),
+  bulkExportByPriority: (priorityBucket, format) => ipcRenderer.invoke('bulk-export-priority', priorityBucket, format),
   onNotificationReceived: (cb) => ipcRenderer.on('notification-received', (_, data) => cb(data)),
   onNavigateTo: (cb) => ipcRenderer.on('navigate-to', (_, section) => cb(section))
 });

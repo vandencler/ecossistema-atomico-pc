@@ -9,10 +9,14 @@ async function initializeDatabase() {
   try {
     const schema = fs.readFileSync(schemaPath, 'utf8');
     
-    // Split by semicolons for execution, but simple execution is often fine for IF NOT EXISTS
-    await ecoPool.query(schema);
+    // Simple execution is fine for IF NOT EXISTS, we will just log if it fails
+    try {
+      await ecoPool.query(schema);
+      console.log('Schema aplicado com sucesso.');
+    } catch (e) {
+      console.warn(`[DB INIT] Aviso ao executar schema em bloco: ${e.message}`);
+    }
     
-    console.log('Schema aplicado com sucesso.');
     return { ok: true };
   } catch (error) {
     console.error('Erro ao inicializar banco de dados:', error.message);

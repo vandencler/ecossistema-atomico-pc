@@ -18,11 +18,27 @@ CREATE INDEX IF NOT EXISTS idx_pessoas_cdchamada_trgm ON wshop.pessoas USING gin
 -- nrcgc_cic: trigram search for documents (CPF/CNPJ) allowing partial matches
 CREATE INDEX IF NOT EXISTS idx_pessoas_nrcgc_cic_trgm ON wshop.pessoas USING gin (LOWER(nrcgc_cic) gin_trgm_ops);
 
--- nrtelefone: search for sanitized numbers (digits only)
-CREATE INDEX IF NOT EXISTS idx_pessoas_phones_trgm ON wshop.pessoas USING gin (
-    REGEXP_REPLACE(COALESCE(campostelwhatsapp,''), '[^0-9]', '', 'g') gin_trgm_ops,
+-- Optimized Phone Search (Split into separate indexes for better OR performance)
+-- We use a functional index to search only the digits, matching the application's search logic.
+-- Note: idx_pessoas_phones_trgm is considered legacy and replaced by these two.
+CREATE INDEX IF NOT EXISTS idx_pessoas_telwa_trgm ON wshop.pessoas USING gin (
+    REGEXP_REPLACE(COALESCE(campostelwhatsapp,''), '[^0-9]', '', 'g') gin_trgm_ops
+);
+
+CREATE INDEX IF NOT EXISTS idx_pessoas_phone_trgm ON wshop.pessoas USING gin (
     REGEXP_REPLACE(COALESCE(nrtelefone,''), '[^0-9]', '', 'g') gin_trgm_ops
 );
 
--- Analyze to update statistics
+-- 4. Re-analyze statistics
 ANALYZE wshop.pessoas;
+
+-- 5. Permission Grants (Critical for Lookup and Sync Services)
+-- The application requires SELECT for searching and UPDATE for the real-time sync service.
+GRANT USAGE ON SCHEMA wshop TO eav_writer;
+GRANT USAGE ON SCHEMA wshop TO eav_reader;
+
+GRANT SELECT, UPDATE ON wshop.pessoas TO eav_writer;
+GRANT SELECT, UPDATE ON wshop.crediar TO eav_writer;
+
+GRANT SELECT ON wshop.pessoas TO eav_reader;
+GRANT SELECT ON wshop.crediar TO eav_reader;

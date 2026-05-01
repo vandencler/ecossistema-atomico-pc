@@ -136,7 +136,7 @@ async function saveCorrection(payload) {
 
       // Priority check and notification
       try {
-        const priorityScore = intel.calculatePriority({
+        const priorityScore = await intel.calculatePriority({
           origem: normalized.origem,
           tipo_acao: 'ALTERAR_CAMPO',
           criado_em: new Date(),

@@ -9,6 +9,8 @@ const SESSION_ID = crypto.randomUUID();
  * Designed with offline resilience via SQLite buffering.
  */
 
+let isFlushing = false;
+
 async function trackEvent(eventName, userId, payload = {}) {
   const occurredAt = new Date().toISOString();
   console.log(`[TELEMETRY] ${eventName} | User: ${userId}`);
@@ -16,37 +18,61 @@ async function trackEvent(eventName, userId, payload = {}) {
   // 1. Always buffer to local SQLite first for resilience
   try {
     const db = getLocalDb();
-    db.prepare(`
-      INSERT INTO telemetry_buffer (event_name, user_id, payload, occurred_at)
-      VALUES (?, ?, ?, ?)
-    `).run(eventName, userId, JSON.stringify(payload), occurredAt);
+    if (db) {
+      db.prepare(`
+        INSERT INTO telemetry_buffer (event_name, user_id, payload, occurred_at)
+        VALUES (?, ?, ?, ?)
+      `).run(eventName, userId, JSON.stringify(payload), occurredAt);
+    }
   } catch (e) {
+    if (e.message.includes('not initialized')) {
+      // Quietly ignore in CLI/Test contexts where localDb isn't required
+      return;
+    }
     console.error('[TELEMETRY] Failed to buffer locally:', e.message);
   }
 
-  // 2. Proactively try to flush if online
-  setImmediate(() => flushTelemetry());
+  // 2. Proactively try to flush if not already flushing
+  if (!isFlushing) {
+    setImmediate(() => flushTelemetry());
+  }
 }
 
 async function flushTelemetry() {
-  const db = getLocalDb();
-  const pending = db.prepare('SELECT * FROM telemetry_buffer WHERE synced = 0 LIMIT 50').all();
+  if (isFlushing) return;
+  isFlushing = true;
 
-  if (pending.length === 0) return;
+  try {
+    const db = getLocalDb();
+    const pending = db.prepare('SELECT * FROM telemetry_buffer LIMIT 100').all();
 
-  for (const event of pending) {
+    if (pending.length === 0) return;
+
+    // Use a multi-row insert for efficiency
+    const values = pending.map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`).join(', ');
+    const flatParams = [];
+    pending.forEach(e => {
+      flatParams.push(e.event_name, e.user_id, JSON.parse(e.payload), e.occurred_at, SESSION_ID);
+    });
+
     try {
       await ecoPool.query(`
         INSERT INTO telemetry_events (event_name, user_id, payload, occurred_at, session_id)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [event.event_name, event.user_id, JSON.parse(event.payload), event.occurred_at, SESSION_ID]);
+        VALUES ${values}
+      `, flatParams);
 
-      db.prepare('DELETE FROM telemetry_buffer WHERE id = ?').run(event.id);
+      const ids = pending.map(e => e.id);
+      db.prepare(`DELETE FROM telemetry_buffer WHERE id IN (${ids.map(() => '?').join(',')})`).run(ids);
+      
+      // If we hit the limit, there's more to flush
+      if (pending.length === 100) {
+        setImmediate(() => flushTelemetry());
+      }
     } catch (e) {
-      // If PostgreSQL is unreachable, we stop flushing and leave events in SQLite
       console.warn('[TELEMETRY] Sync failed, will retry later:', e.message);
-      break;
     }
+  } finally {
+    isFlushing = false;
   }
 }
 

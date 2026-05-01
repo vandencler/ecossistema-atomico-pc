@@ -1,0 +1,35 @@
+{
+  "baseScore": 30,
+  "abcBonus": {
+    "A": 25,
+    "B": 12,
+    "C": 0
+  },
+  "birthdayBonus": 20,
+  "recencyBonus": {
+    "hot": { "maxDays": 30, "bonus": 16 },
+    "warm": { "maxDays": 90, "bonus": 8 },
+    "reactivation": { "minDays": 365, "bonus": 12 },
+    "cold": { "bonus": 3 }
+  },
+  "sourceBonus": {
+    "MANUAL": 15,
+    "default": 5
+  },
+  "typeBonus": {
+    "ALTERAR_CAMPO": 10,
+    "default": 4
+  },
+  "ageBonus": {
+    "pointsPerDay": 1,
+    "maxPoints": 20
+  },
+  "mlRisk": {
+    "minConfidence": 60,
+    "multiplier": 0.2
+  },
+  "driftBonus": {
+    "multiplier": 1.3,
+    "bonus": 15
+  }
+}

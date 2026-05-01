@@ -59,7 +59,7 @@ test('getSystemConfigs - should return rows', async () => {
 });
 
 test('setSystemConfig - should execute insert/update', async () => {
-  let captured = [];
+  const captured = [];
   const mockEcoPool = {
     query: async (sql, params) => {
       captured.push({ sql, params });

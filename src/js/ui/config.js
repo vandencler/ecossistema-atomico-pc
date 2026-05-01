@@ -1,5 +1,6 @@
-import { $, create, setChildren, stateMessage } from '../utils.js';
+import { $, create, setChildren, stateMessage, toast } from '../utils.js';
 import { api } from '../api.js';
+import { MetricCard, StatusBadge } from './components.js';
 
 export async function loadConfigModule() {
   const dbContainer = $('db-status-container');
@@ -44,27 +45,20 @@ function renderOpsMetrics(health) {
   const mirror = health.databases.mirror || {};
   
   return create('div', { className: 'ops-metrics-grid' }, [
-    createMetricCard('Busca Otimizada', mirror.indexesOptimized ? 'SIM' : 'NÃO', mirror.indexesOptimized ? 'success' : 'warn'),
-    createMetricCard('Cache Offline', `${health.databases.ecosystem.cacheRows || 0} clientes`, 'info'),
-    createMetricCard('Telemetria Total', tel.totalEvents, 'info'),
-    createMetricCard('Buffer Offline', tel.bufferedEvents, tel.bufferedEvents > 100 ? 'warn' : 'info')
-  ]);
-}
-
-function createMetricCard(label, value, type) {
-  return create('div', { className: `metric-card metric-${type}` }, [
-    create('div', { className: 'metric-label', text: label }),
-    create('div', { className: 'metric-value', text: value })
+    MetricCard('Busca Otimizada', mirror.indexesOptimized ? 'SIM' : 'NÃO', { type: mirror.indexesOptimized ? 'success' : 'warn' }),
+    MetricCard('Cache Offline', `${health.databases.ecosystem.cacheRows || 0} clientes`, { type: 'info' }),
+    MetricCard('Telemetria Total', tel.totalEvents, { type: 'info' }),
+    MetricCard('Buffer Offline', tel.bufferedEvents, { type: tel.bufferedEvents > 100 ? 'warn' : 'info' })
   ]);
 }
 
 function renderDbStatus(name, db) {
-  const statusClass = db.status === 'OK' ? 'status-ok' : 'status-error';
+  const statusType = db.status === 'OK' ? 'success' : 'error';
   const detail = db.status === 'OK' ? db.version : db.error;
   
   return create('div', { className: 'db-status-item' }, [
     create('div', { className: 'db-name', text: name }),
-    create('div', { className: `db-status-indicator ${statusClass}`, text: db.status }),
+    StatusBadge(db.status, { type: statusType }),
     create('div', { className: 'db-version', text: detail || 'Indisponível' })
   ]);
 }

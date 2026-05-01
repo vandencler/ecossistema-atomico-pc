@@ -136,6 +136,15 @@ BEGIN
         ALTER TABLE acoes_pendentes ADD COLUMN execucao_iniciada_em TIMESTAMP WITH TIME ZONE;
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'acoes_pendentes'
+          AND column_name = 'revisando_por'
+    ) THEN
+        ALTER TABLE acoes_pendentes ADD COLUMN revisando_por VARCHAR(100);
+    END IF;
+
     UPDATE acoes_pendentes
     SET entidade = COALESCE(NULLIF(entidade, ''), 'cliente'),
         id_entidade = COALESCE(NULLIF(id_entidade, ''), idpessoa)
@@ -156,28 +165,44 @@ CREATE TABLE IF NOT EXISTS acoes_historico (
 );
 
 -- Table for centralized logging
+-- Tracks significant system events, user actions, and background process status.
 CREATE TABLE IF NOT EXISTS log_eventos (
     id SERIAL PRIMARY KEY,
     tipo VARCHAR(50) NOT NULL,
-    idpessoa VARCHAR(40),
-    detalhe TEXT,
+    idpessoa VARCHAR(40), -- Optional: related person ID
+    detalhe TEXT,         -- Human-readable detail or JSON payload
     usuario VARCHAR(100) DEFAULT 'sistema',
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Table for telemetry and usage metrics
+-- High-volume table for UI interactions, performance markers, and session tracking.
 CREATE TABLE IF NOT EXISTS telemetry_events (
     id SERIAL PRIMARY KEY,
     event_name VARCHAR(100) NOT NULL,
     user_id VARCHAR(100),
     payload JSONB,
     occurred_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    session_id UUID DEFAULT gen_random_uuid()
+    session_id UUID DEFAULT (md5(random()::text || clock_timestamp()::text)::uuid)
 );
 
 CREATE INDEX IF NOT EXISTS idx_telemetry_event_name ON telemetry_events(event_name);
 CREATE INDEX IF NOT EXISTS idx_telemetry_user_id ON telemetry_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_telemetry_occurred_at ON telemetry_events(occurred_at);
+
+-- Table for Enriched Client Data
+-- Stores application-specific metadata, interaction history, and scores.
+CREATE TABLE IF NOT EXISTS clientes_enriquecidos (
+    idpessoa VARCHAR(40) PRIMARY KEY,
+    tags TEXT[],
+    notas TEXT,
+    ultima_interacao TIMESTAMP WITH TIME ZONE,
+    canal_preferido VARCHAR(50),
+    score_engajamento NUMERIC(5,2) DEFAULT 0.00,
+    foto_url TEXT,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Cache for client ranking to avoid heavy on-the-fly calculations
 CREATE TABLE IF NOT EXISTS ranking_cache (
@@ -205,7 +230,10 @@ VALUES
   ('auto_sync_enabled', 'true', 'Habilitar sincronização automática em segundo plano (true/false)'),
   ('sav_urgency_hours', '4', 'Horas de espera para marcar uma ação SAV manual como urgente'),
   ('notifications_enabled', 'true', 'Habilitar notificações desktop (true/false)'),
-  ('notifications_sav_new', 'true', 'Notificar sobre novas ações SAV (true/false)')
+  ('notifications_sav_new', 'true', 'Notificar sobre novas ações SAV (true/false)'),
+  ('omnichannel_whatsapp_enabled', 'false', 'Habilitar envio automático de mensagens WhatsApp (true/false)'),
+  ('whatsapp_api_url', 'https://graph.facebook.com/v17.0/PHONE_NUMBER_ID/messages', 'URL da API do WhatsApp Business'),
+  ('whatsapp_api_token', 'MOCK_TOKEN', 'Token de autenticação da API do WhatsApp')
 ON CONFLICT (chave) DO NOTHING;
 
 -- Indexes for performance
@@ -217,3 +245,46 @@ CREATE INDEX IF NOT EXISTS idx_acoes_entidade ON acoes_pendentes(entidade, id_en
 CREATE INDEX IF NOT EXISTS idx_acoes_historico_acao ON acoes_historico(acao_id);
 CREATE INDEX IF NOT EXISTS idx_correcoes_pessoa ON correcoes_campos(idpessoa);
 CREATE INDEX IF NOT EXISTS idx_acoes_pessoa ON acoes_pendentes(idpessoa);
+
+-- Trigger for Real-Time SAV Sync
+CREATE OR REPLACE FUNCTION notify_sav_approved()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.status = 'APROVADO' AND OLD.status != 'APROVADO' THEN
+    PERFORM pg_notify('sav_approved', NEW.id::text);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_notify_sav_approved ON acoes_pendentes;
+CREATE TRIGGER trg_notify_sav_approved
+AFTER UPDATE OF status ON acoes_pendentes
+FOR EACH ROW
+EXECUTE PROCEDURE notify_sav_approved();
+
+-- ML Integration Schema (Phase 2)
+-- These tables receive pre-computed data from external ML pipelines.
+
+CREATE TABLE IF NOT EXISTS ml_churn_risk (
+    idpessoa VARCHAR(40) PRIMARY KEY,
+    risk_score DECIMAL(5,2) DEFAULT 0.00, -- 0.00 to 100.00
+    next_purchase_estimate DATE,
+    confidence DECIMAL(5,2) DEFAULT 0.00,
+    model_version VARCHAR(50),
+    calculado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ml_product_affinity (
+    id SERIAL PRIMARY KEY,
+    idpessoa VARCHAR(40) NOT NULL,
+    idproduto VARCHAR(40) NOT NULL,
+    affinity_score DECIMAL(5,2) DEFAULT 0.00, -- 0.00 to 100.00
+    reason_code VARCHAR(50), -- e.g., 'BOUGHT_TOGETHER', 'SIMILAR_PROFILE'
+    calculado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(idpessoa, idproduto)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ml_affinity_pessoa ON ml_product_affinity(idpessoa);
+CREATE INDEX IF NOT EXISTS idx_ml_affinity_score ON ml_product_affinity(affinity_score DESC);
+

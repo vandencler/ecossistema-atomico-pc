@@ -1,5 +1,6 @@
-import { $, create, setChildren, textValue, stateMessage, validPhoneDigits, fmtDate, toast } from '../utils.js';
+import { $, create, setChildren, textValue, stateMessage, validPhoneDigits, fmtDate, toast, showPrompt } from '../utils.js';
 import { api } from '../api.js';
+import { MetricCard, StatusBadge, ActionGroup, IconButton, DiffBox } from './components.js';
 
 const STATUS_TABS = [
   ['PENDENTE', 'Pendentes'],
@@ -20,7 +21,7 @@ const STATUS_LABELS = {
   CANCELADO: 'Cancelada'
 };
 
-let filters = {
+const filters = {
   status: 'PENDENTE',
   search: '',
   campo: '',
@@ -125,10 +126,13 @@ function ensureSavControls(onOpenClient, onOpenWhatsApp) {
 function renderSummary(info) {
   const summary = $('sav-summary');
   setChildren(summary, [
-    create('span', { className: 'sav-chip', text: `Total: ${info.total || lastRows.length}` }),
-    create('span', { className: 'sav-chip sav-chip-critical', text: `Critica: ${info.critica || 0}` }),
-    create('span', { className: 'sav-chip sav-chip-high', text: `Alta: ${info.alta || 0}` }),
-    create('span', { className: 'sav-chip', text: `Status: ${STATUS_LABELS[filters.status] || filters.status}` })
+    MetricCard('Total', info.total || lastRows.length, { type: 'info' }),
+    MetricCard('Critica', info.critica || 0, { type: 'error' }),
+    MetricCard('Alta', info.alta || 0, { type: 'warn' }),
+    create('div', { className: 'metric-card' }, [
+      create('div', { className: 'metric-label', text: 'Status Atual' }),
+      StatusBadge(STATUS_LABELS[filters.status] || filters.status, { type: filters.status.toLowerCase() })
+    ])
   ]);
 
   document.querySelectorAll('.sav-tab').forEach((button) => {
@@ -141,14 +145,14 @@ function renderBulkBar(onOpenClient, onOpenWhatsApp) {
   const target = $('sav-bulkbar');
   if (!target) return;
 
-  const pendingRows = lastRows.filter((row) => row.status === 'PENDENTE');
-  const selectedPending = pendingRows.filter((row) => selectedIds.has(row.id));
-  const allVisibleSelected = pendingRows.length > 0 && selectedPending.length === pendingRows.length;
+  const selectedRows = lastRows.filter((row) => selectedIds.has(row.id));
+  const selectedPending = selectedRows.filter((row) => row.status === 'PENDENTE');
+  const allVisibleSelected = lastRows.length > 0 && selectedRows.length === lastRows.length;
 
-  const selectAll = create('input', { className: 'sav-select-all', type: 'checkbox', attrs: { title: 'Selecionar pendentes visiveis' } });
+  const selectAll = create('input', { className: 'sav-select-all', type: 'checkbox', attrs: { title: 'Selecionar visiveis' } });
   selectAll.checked = allVisibleSelected;
   selectAll.addEventListener('change', () => {
-    pendingRows.forEach((row) => {
+    lastRows.forEach((row) => {
       if (selectAll.checked) selectedIds.add(row.id);
       else selectedIds.delete(row.id);
     });
@@ -156,27 +160,52 @@ function renderBulkBar(onOpenClient, onOpenWhatsApp) {
     renderRows(onOpenClient, onOpenWhatsApp);
   });
 
-  const approve = create('button', {
+  const approve = IconButton(`Aprovar ${selectedPending.length || ''}`.trim(), () => reviewSelected('APROVADO', onOpenClient, onOpenWhatsApp), {
     className: 'sav-approve-btn',
-    type: 'button',
-    text: `Aprovar ${selectedPending.length || ''}`.trim(),
-    onClick: () => reviewSelected('APROVADO', onOpenClient, onOpenWhatsApp)
+    disabled: selectedPending.length === 0
   });
-  approve.disabled = selectedPending.length === 0;
 
-  const reject = create('button', {
+  const reject = IconButton(`Rejeitar ${selectedPending.length || ''}`.trim(), () => reviewSelected('REJEITADO', onOpenClient, onOpenWhatsApp), {
     className: 'sav-reject-btn',
-    type: 'button',
-    text: `Rejeitar ${selectedPending.length || ''}`.trim(),
-    onClick: () => reviewSelected('REJEITADO', onOpenClient, onOpenWhatsApp)
+    disabled: selectedPending.length === 0
   });
-  reject.disabled = selectedPending.length === 0;
+
+  const exportPDF = IconButton('Exportar PDF', async () => {
+    const ids = Array.from(new Set(selectedRows.map(r => r.idpessoa).filter(Boolean)));
+    if (ids.length === 0) return;
+    const res = await api.bulkExportClients(ids, 'pdf');
+    if (res.error) toast(`Erro: ${res.error}`, 'error');
+    else if (!res.canceled) toast('PDF em lote gerado!', 'success');
+  }, {
+    className: 'sav-export-btn',
+    disabled: selectedRows.length === 0
+  });
+
+  const exportExcel = IconButton('Exportar Excel', async () => {
+    const ids = Array.from(new Set(selectedRows.map(r => r.idpessoa).filter(Boolean)));
+    if (ids.length === 0) return;
+    const res = await api.bulkExportClients(ids, 'excel');
+    if (res.error) toast(`Erro: ${res.error}`, 'error');
+    else if (!res.canceled) toast('Excel em lote gerado!', 'success');
+  }, {
+    className: 'sav-export-btn',
+    disabled: selectedRows.length === 0
+  });
+
+  const actionsList = [approve, reject, exportPDF, exportExcel];
+
+  if (filters.prioridade !== 'todas') {
+    actionsList.push(IconButton(`Exportar Pri. ${filters.prioridade.toUpperCase()}`, async () => {
+      const res = await api.bulkExportByPriority(filters.prioridade, 'pdf');
+      if (res.error) toast(`Erro: ${res.error}`, 'error');
+      else if (!res.canceled) toast('PDF de prioridade gerado!', 'success');
+    }, { className: 'sav-export-btn' }));
+  }
 
   setChildren(target, [
-    create('label', { className: 'sav-bulk-select' }, [selectAll, create('span', { text: 'Selecionar pendentes' })]),
-    create('span', { className: 'sav-bulk-count', text: `${selectedPending.length} selecionada(s)` }),
-    approve,
-    reject
+    create('label', { className: 'sav-bulk-select' }, [selectAll, create('span', { text: 'Selecionar visiveis' })]),
+    create('span', { className: 'sav-bulk-count', text: `${selectedRows.length} selecionada(s)` }),
+    ActionGroup(actionsList)
   ]);
 }
 
@@ -194,9 +223,9 @@ async function reviewSelected(decision, onOpenClient, onOpenWhatsApp) {
     .map((row) => row.id);
   if (ids.length === 0) return;
 
-  const motivo = decision === 'REJEITADO' ? window.prompt('Motivo da rejeicao:', '') : '';
+  const motivo = decision === 'REJEITADO' ? await showPrompt('Motivo da rejeicao:', '') : '';
   if (decision === 'REJEITADO' && !motivo) {
-    toast('Informe um motivo para rejeitar.', 'error');
+    if (motivo !== null) toast('Informe um motivo para rejeitar.', 'error');
     return;
   }
 
@@ -270,7 +299,11 @@ async function toggleHistory(row, card) {
 
   setChildren(history, rows.map((item) => create('div', { className: 'sav-history-row' }, [
     create('span', { className: 'sav-history-date', text: fmtDate(item.criado_em) }),
-    create('span', { className: 'sav-history-status', text: `${item.status_anterior || 'novo'} -> ${item.status_novo}` }),
+    create('span', { className: 'sav-history-status' }, [
+      StatusBadge(item.status_anterior || 'novo', { type: (item.status_anterior || 'info').toLowerCase() }),
+      create('span', { text: ' -> ' }),
+      StatusBadge(item.status_novo, { type: item.status_novo.toLowerCase() })
+    ]),
     create('span', { className: 'sav-history-user', text: textValue(item.usuario, 'sistema') }),
     item.motivo ? create('span', { className: 'sav-history-reason', text: item.motivo }) : null
   ])));
@@ -291,7 +324,6 @@ function renderSavCard(row, onOpenClient, onOpenWhatsApp) {
     attrs: { title: 'Selecionar para acao em lote' }
   });
   checkbox.checked = selectedIds.has(row.id);
-  checkbox.disabled = !canReview;
   checkbox.addEventListener('change', () => {
     if (checkbox.checked) selectedIds.add(row.id);
     else selectedIds.delete(row.id);
@@ -300,57 +332,50 @@ function renderSavCard(row, onOpenClient, onOpenWhatsApp) {
 
   const card = create('div', { className: `sav-card ${urgencyClass} status-${status.toLowerCase()}` });
   const actions = [
-    create('button', { className: 'sav-open-btn', type: 'button', text: 'Abrir', onClick: () => onOpenClient?.(row.idpessoa) }),
-    create('button', { className: 'sav-history-btn', type: 'button', text: 'Historico', onClick: () => toggleHistory(row, card) })
+    IconButton('Abrir', () => onOpenClient?.(row.idpessoa), { className: 'sav-open-btn' }),
+    IconButton('Historico', () => toggleHistory(row, card), { className: 'sav-history-btn' })
   ];
 
   if (phone) {
-    actions.push(create('button', { className: 'sav-whatsapp-btn', type: 'button', text: 'WhatsApp', onClick: () => onOpenWhatsApp?.(phone) }));
+    actions.push(IconButton('WhatsApp', () => onOpenWhatsApp?.(phone), { className: 'sav-whatsapp-btn' }));
   }
   if (canReview) {
-    actions.push(create('button', { className: 'sav-approve-btn', type: 'button', text: 'Aprovar', onClick: () => reviewSavAction(row, 'APROVADO', onOpenClient, onOpenWhatsApp) }));
-    actions.push(create('button', { className: 'sav-reject-btn', type: 'button', text: 'Rejeitar', onClick: () => reviewSavAction(row, 'REJEITADO', onOpenClient, onOpenWhatsApp) }));
+    actions.push(IconButton('Aprovar', () => reviewSavAction(row, 'APROVADO', onOpenClient, onOpenWhatsApp), { className: 'sav-approve-btn' }));
+    actions.push(IconButton('Rejeitar', () => reviewSavAction(row, 'REJEITADO', onOpenClient, onOpenWhatsApp), { className: 'sav-reject-btn' }));
   }
   if (canUndo) {
-    actions.push(create('button', { className: 'sav-undo-btn', type: 'button', text: 'Desfazer', onClick: () => undoAction(row, onOpenClient, onOpenWhatsApp) }));
+    actions.push(IconButton('Desfazer', () => undoAction(row, onOpenClient, onOpenWhatsApp), { className: 'sav-undo-btn' }));
   }
 
   const reasons = Array.isArray(row.prioridade_motivos) ? row.prioridade_motivos : [];
   const meta = [
-    urgencyLabel,
-    row.tipo_acao || 'ACAO',
-    row.campo || 'campo',
-    `${ageHours}h`,
-    row.aniversario_hoje ? 'Aniversario hoje' : '',
-    row.dias_sem_compra !== undefined ? `${row.dias_sem_compra}d sem compra` : ''
+    StatusBadge(urgencyLabel, { type: urgencyClass }),
+    StatusBadge(row.tipo_acao || 'ACAO', { type: 'info' }),
+    create('span', { text: row.campo || 'campo' }),
+    create('span', { text: `${ageHours}h` }),
+    row.aniversario_hoje ? StatusBadge('Aniversario hoje', { type: 'success' }) : null,
+    row.dias_sem_compra !== undefined ? create('span', { text: `${row.dias_sem_compra}d sem compra` }) : null
   ].filter(Boolean);
 
   setChildren(card, [
     create('div', { className: 'sav-head' }, [
       create('label', { className: 'sav-check-wrap' }, [checkbox]),
       create('div', { className: 'sav-person', text: textValue(row.nome_pessoa, 'Cliente') }),
-      create('span', { className: `sav-status sav-status-${status.toLowerCase()}`, text: STATUS_LABELS[status] || status }),
+      StatusBadge(STATUS_LABELS[status] || status, { type: status.toLowerCase() }),
       create('span', { className: 'sav-priority', text: String(row.prioridade_score || 0) })
     ]),
-    create('div', { className: 'sav-meta' }, meta.map((item) => create('span', { text: item }))),
+    create('div', { className: 'sav-meta' }, meta),
     create('div', { className: 'sav-diff' }, [
-      diffBox('Atual', row.valor_atual),
-      diffBox('Anterior', row.valor_anterior),
-      diffBox('Novo', row.valor_novo, true)
+      DiffBox('Atual', row.valor_atual),
+      DiffBox('Anterior', row.valor_anterior),
+      DiffBox('Novo', row.valor_novo, { highlight: true })
     ]),
     reasons.length ? create('div', { className: 'sav-priority-reasons' }, reasons.map((reason) => create('span', { text: reason }))) : null,
     create('div', { className: 'sav-motive', text: textValue(row.motivo, 'Sem motivo informado') }),
-    create('div', { className: 'sav-actions' }, actions)
+    ActionGroup(actions)
   ]);
 
   return card;
-}
-
-function diffBox(label, value, highlight = false) {
-  return create('div', { className: highlight ? 'sav-diff-box sav-diff-new' : 'sav-diff-box' }, [
-    create('span', { className: 'sav-diff-label', text: label }),
-    create('span', { className: 'sav-diff-value', text: textValue(value, 'vazio') })
-  ]);
 }
 
 function debounce(fn, wait) {

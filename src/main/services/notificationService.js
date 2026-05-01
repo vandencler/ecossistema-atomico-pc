@@ -14,8 +14,8 @@ class NotificationService {
    * @param {Function} [options.onClick] - Optional click handler.
    */
   notify(options) {
-    if (!Notification.isSupported()) {
-      console.warn('[NOTIFY] Desktop notifications are not supported on this platform.');
+    if (!Notification || !Notification.isSupported()) {
+      console.warn('[NOTIFY] Desktop notifications are not supported or available on this platform.');
       return;
     }
 

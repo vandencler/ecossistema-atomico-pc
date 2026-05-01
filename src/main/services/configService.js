@@ -110,7 +110,7 @@ async function getConfigValue(chave, fallback) {
   try {
     const res = await ecoPool.query('SELECT valor FROM config_sistema WHERE chave = $1', [chave]);
     return res.rows[0]?.valor ?? fallback;
-  } catch (e) {
+  } catch {
     return fallback;
   }
 }
@@ -170,3 +170,4 @@ module.exports = {
   getConfigValue,
   validateConfig
 };
+

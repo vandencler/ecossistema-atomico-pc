@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 function _logToFile(tipo, detalhe) {
+  const nodeEnv = (process.env.NODE_ENV || '').trim();
+  if (nodeEnv === 'test' || process.env.ELECTRON_RUN_AS_NODE === '1') return;
   try {
     const logPath = path.join(process.cwd(), 'system.log');
     const line = `[${new Date().toISOString()}] [${tipo}] ${detalhe}\n`;

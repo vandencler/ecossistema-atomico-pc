@@ -1,22 +1,33 @@
 {
   "name": "ecossistema-atomico",
-  "version": "1.0.0",
-  "description": "Ecossistema Atômico de Vendas — Empório Natural",
+  "version": "1.1.2",
+  "description": "Ecossistema Atomico de Vendas - Emporio Natural",
   "main": "main.js",
   "scripts": {
     "start": "set ELECTRON_RUN_AS_NODE=& electron .",
     "dev": "set ELECTRON_RUN_AS_NODE=& electron . --dev",
-    "test": "node --test tests/*.test.js",
+    "test": "set NODE_ENV=test&& node --test tests/*.test.js",
     "lint": "eslint .",
     "build": "electron-builder --win",
-    "pack": "electron-builder --dir"
+    "pack": "electron-builder --dir",
+    "ml:extract": "node scripts/export_ml_data.js",
+    "ml:process": "node scripts/process_ml_scores.js"
   },
+  "author": "Emporio Natural",
   "build": {
     "appId": "com.atomico.ecossistema",
-    "productName": "Ecossistema Atômico",
+    "productName": "Ecossistema Atomico",
+    "copyright": "Copyright 2026 Emporio Natural",
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "emporio-natural",
+        "repo": "ecossistema-atomico"
+      }
+    ],
     "win": {
       "target": [
         "nsis"
@@ -32,11 +43,16 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
+    "electron-updater": "^6.8.3",
+    "exceljs": "^4.4.0",
+    "pdfmake": "^0.2.10",
     "pg": "^8.13.0"
   },
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
+    "eslint": "^10.2.1",
+    "globals": "^17.5.0",
     "proxyquire": "^2.1.3"
   }
 }

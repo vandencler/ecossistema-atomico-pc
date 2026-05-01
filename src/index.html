@@ -36,6 +36,9 @@
       <button class="nav-btn" data-module="config" type="button">
         <span class="nav-icon">G</span><span class="nav-label">Config</span>
       </button>
+      <button class="nav-btn" data-module="health" type="button">
+        <span class="nav-icon">H</span><span class="nav-label">Saúde</span>
+      </button>
     </div>
 
     <div class="module-content" id="module-content">
@@ -143,6 +146,16 @@
             <p>Ecossistema Atômico v1.0.0</p>
             <p>Desenvolvido para Empório Natural</p>
           </div>
+        </div>
+      </div>
+
+      <div class="module" id="mod-health" hidden>
+        <div class="health-header">
+          <div class="health-title">Painel de Saúde do Sistema</div>
+          <button class="health-refresh-btn" id="health-refresh" type="button">Atualizar</button>
+        </div>
+        <div id="health-dashboard-container">
+          <div class="state-msg muted">Carregando diagnóstico...</div>
         </div>
       </div>
     </div>

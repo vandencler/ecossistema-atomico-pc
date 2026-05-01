@@ -60,7 +60,7 @@ const ecoPool = new Pool(dbConfig('ecosystem', 'ECOSYSTEM', {
   port: 5432,
   database: 'ECOSSISTEMA_ATOMICO',
   user: 'postgres',
-  max: 3
+  max: 10
 }));
 
 ecoPool.on('error', (err) => {

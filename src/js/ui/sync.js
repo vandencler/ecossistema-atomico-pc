@@ -20,40 +20,71 @@ export async function loadSyncModule() {
 
   const items = data.items || [];
   const total = data.totalPending || 0;
+  const readyToExport = data.readyToExport || 0;
   const divergent = items.filter((item) => item.needsSync).length;
   const blocked = items.filter((item) => item.blocked).length;
 
   setChildren(summary, [
     create('span', { className: 'sync-chip', text: `Aprovadas: ${total}` }),
     create('span', { className: `sync-chip ${divergent > 0 ? 'sync-chip-warn' : ''}`, text: `Divergentes: ${divergent}` }),
+    readyToExport > 0 ? create('span', { className: 'sync-chip sync-chip-info', text: `Aguardando ERP: ${readyToExport}` }) : null,
     blocked ? create('span', { className: 'sync-chip sync-chip-error', text: `Bloqueadas: ${blocked}` }) : null
   ]);
 
-  if (items.length === 0) {
+  if (items.length === 0 && readyToExport === 0) {
     setChildren(list, stateMessage('Nenhuma correcao aprovada para sincronizacao.', 'muted'));
     return;
   }
 
-  setChildren(list, items.map(renderSyncItem));
+  if (items.length > 0) {
+    setChildren(list, items.map(renderSyncItem));
+  } else {
+    setChildren(list, stateMessage(`Mirror sincronizado. ${readyToExport} item(ns) aguardando exportacao para o ERP.`, 'success'));
+  }
 
-  if (divergent > 0) {
+  if (divergent > 0 || readyToExport > 0) {
     actions.hidden = false;
-    const pending = items.filter((item) => item.needsSync);
-    const previewBtn = create('button', {
-      id: 'sync-preview',
-      className: 'sync-preview-btn',
-      type: 'button',
-      text: 'Prever UPDATEs',
-      onClick: () => runSync(pending, true, previewBtn)
-    });
-    const syncBtn = create('button', {
-      id: 'sync-all',
-      className: 'sync-all-btn',
-      type: 'button',
-      text: 'Sincronizar Aprovadas',
-      onClick: () => runSync(pending, false, syncBtn)
-    });
-    setChildren(actions, [previewBtn, syncBtn]);
+    const buttons = [];
+
+    if (divergent > 0) {
+      const pending = items.filter((item) => item.needsSync);
+      buttons.push(create('button', {
+        id: 'sync-preview',
+        className: 'sync-preview-btn',
+        type: 'button',
+        text: 'Prever UPDATEs',
+        onClick: () => runSync(pending, true, buttons[0])
+      }));
+      buttons.push(create('button', {
+        id: 'sync-all',
+        className: 'sync-all-btn',
+        type: 'button',
+        text: 'Sincronizar Aprovadas',
+        onClick: () => runSync(pending, false, buttons[1])
+      }));
+    }
+
+    if (readyToExport > 0) {
+      buttons.push(create('button', {
+        id: 'sync-export-sql',
+        className: divergent > 0 ? 'sync-preview-btn' : 'sync-all-btn',
+        type: 'button',
+        text: 'Exportar Lote SQL',
+        onClick: async () => {
+          const result = await api.getBatchSql();
+          if (result.error) {
+            toast(`Erro ao gerar script: ${result.error}`, 'error');
+          } else if (result.canceled) {
+            toast('Exportacao cancelada.', 'info');
+          } else {
+            toast('Script SQL de lote exportado com sucesso.', 'success');
+            loadSyncModule(); // Refresh to update readyToExport count
+          }
+        }
+      }));
+    }
+
+    setChildren(actions, buttons);
   }
 }
 

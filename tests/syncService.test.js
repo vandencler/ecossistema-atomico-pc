@@ -95,3 +95,38 @@ test('performSync dryRun returns preview without writing to ERP target', async (
   assert.strictEqual(result.results[0].status, 'PREVIEW');
   assert.match(result.results[0].sql, /^UPDATE wshop\.pessoas SET email = \$1 WHERE idpessoa = \$2$/);
 });
+
+test('generateBatchScript - should produce valid SQL and escape values', async () => {
+  const ecoQueries = [];
+  const mockEcoPool = {
+    query: async (sql) => {
+      ecoQueries.push(sql);
+      if (sql.includes('SELECT') && sql.includes('acoes_pendentes')) {
+        return {
+          rowCount: 2,
+          rows: [
+            { id: 1, idpessoa: 'C1', campo: 'nmpessoa', valor_novo: "João d'Ávila", nome_pessoa: 'Joao' },
+            { id: 2, idpessoa: 'C2', campo: 'nrtelefone', valor_novo: '9999', nome_pessoa: 'Maria' }
+          ]
+        };
+      }
+      return { rowCount: 0, rows: [] };
+    }
+  };
+
+  const service = proxyquire('../src/main/services/syncService', {
+    '../db': { pool: {}, ecoPool: mockEcoPool },
+    './savService': { ACTION_STATUS: { DONE: 'CONCLUIDO' } },
+    './logService': {},
+    './telemetryService': {},
+    '../localDb': { getLocalDb: () => ({ prepare: () => ({ all: () => [], run: () => {} }) }) }
+  });
+
+  const result = await service.generateBatchScript();
+  assert.strictEqual(result.ok, true);
+  assert.ok(result.sql.includes("UPDATE wshop.pessoas SET nmpessoa = 'João d''Ávila' WHERE idpessoa = 'C1'"));
+  assert.ok(result.sql.includes("UPDATE wshop.pessoas SET nrtelefone = '9999' WHERE idpessoa = 'C2'"));
+  assert.ok(result.sql.includes('BEGIN;'));
+  assert.ok(result.sql.includes('COMMIT;'));
+  assert.deepStrictEqual(result.ids, [1, 2]);
+});

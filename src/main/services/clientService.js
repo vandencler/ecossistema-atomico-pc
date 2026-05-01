@@ -10,9 +10,50 @@ const {
 } = require('../utils');
 
 const { searchLocalCache } = require('./cacheService');
-const { isOfflineMode } = require('./healthService');
+const { isOfflineMode, getIndexMap } = require('./healthService');
+const { getLocalDb } = require('../localDb');
 
 const intel = require('./intelligenceService');
+
+async function cacheOfflineData(idpessoa, lastPurchases, topProducts) {
+  try {
+    const normId = normalizeId(idpessoa, 'idpessoa');
+    const db = getLocalDb();
+
+    db.transaction(() => {
+      db.prepare('DELETE FROM last_purchases_cache WHERE idpessoa = ?').run(normId);
+      db.prepare('DELETE FROM top_products_cache WHERE idpessoa = ?').run(normId);
+
+      const insertPurchase = db.prepare(`
+        INSERT INTO last_purchases_cache (
+          idpessoa, iddocumento, nrdocumento, vltotal, aldesconto, vldesconto,
+          usuario, dsobservacao, dtemissao, nrnotafiscal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const p of lastPurchases) {
+        insertPurchase.run(
+          normId, p.iddocumento, p.nrdocumento, p.vltotal, p.aldesconto, p.vldesconto,
+          p.usuario, p.dsobservacao, p.dtemissao, p.nrnotafiscal
+        );
+      }
+
+      const insertProduct = db.prepare(`
+        INSERT INTO top_products_cache (
+          idpessoa, nmproduto, cdchamada, qtd_total, valor_total, vezes_comprado
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const p of topProducts) {
+        insertProduct.run(
+          normId, p.nmproduto, p.cdchamada, p.qtd_total, p.valor_total, p.vezes_comprado
+        );
+      }
+    })();
+  } catch (e) {
+    console.error(`[CACHE] Erro ao cachear dados offline para ${idpessoa}:`, e);
+  }
+}
 
 async function getClientRanking(idpessoa) {
   try {
@@ -115,41 +156,92 @@ async function searchClient(query) {
     const tokens = normalizeSearchTokens(query);
     if (tokens.length === 0) return { rows: [] };
 
+    const indexMap = await getIndexMap();
     const fullQueryParam = `%${query.trim().toLowerCase()}%`;
     const params = [fullQueryParam];
     
     const conditions = tokens.map((token) => {
-      const textIdx = params.length + 1;
-      params.push(`%${token}%`);
+      const textParam = `%${token}%`;
+      const fuzzyParam = token;
       const digitsOnly = token.replace(/\D/g, '');
-      const digitIdx = params.length + 1;
-      params.push(digitsOnly.length > 0 ? `%${digitsOnly}%` : '%NOMATCH%');
+      const digitParam = digitsOnly.length > 0 ? `%${digitsOnly}%` : '%NOMATCH%';
 
-      const tp = `$${textIdx}`;
-      const dp = `$${digitIdx}`;
-      
-      const addressSearch = token.length > 2 
-        ? `OR LOWER(COALESCE(p.nmendereco,'')) LIKE ${tp}
-           OR LOWER(COALESCE(p.nmbairro,'')) LIKE ${tp}
-           OR LOWER(COALESCE(p.nmcidade,'')) LIKE ${tp}`
-        : '';
+      const subConditions = [];
 
-      return `(
-        LOWER(COALESCE(p.nmpessoa,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.nmcurto,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.nmfantasia,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.nrcgc_cic,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.nrincrest_rg,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.email,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.email2,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.cdchamada,'')) LIKE ${tp}
-        OR LOWER(COALESCE(p.inscest_pfisica,'')) LIKE ${tp}
-        OR COALESCE(TO_CHAR(cr.dtdatanasc, 'DD/MM/YYYY'),'') LIKE ${tp}
-        OR REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${dp}
-        OR REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${dp}
-        ${addressSearch}
-      )`;
+      // Sequential parameter indexing per token
+      const addParam = (val) => {
+        params.push(val);
+        return `$${params.length}::text`;
+      };
+
+      // 1. Name matches (Indexed)
+      if (indexMap['idx_pessoas_nmpessoa_trgm']) {
+        subConditions.push(`LOWER(p.nmpessoa) % ${addParam(fuzzyParam)}`);
+      } else {
+        subConditions.push(`LOWER(p.nmpessoa) LIKE ${addParam(textParam)}`);
+      }
+
+      // 2. Short name / Nickname (Indexed)
+      if (indexMap['idx_pessoas_nmcurto_trgm']) {
+        subConditions.push(`LOWER(p.nmcurto) % ${addParam(fuzzyParam)}`);
+        subConditions.push(`LOWER(p.nmfantasia) % ${addParam(fuzzyParam)}`);
+      } else {
+        subConditions.push(`LOWER(p.nmcurto) LIKE ${addParam(textParam)}`);
+        subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParam)}`);
+      }
+
+      // 3. Call code (Indexed)
+      if (indexMap['idx_pessoas_cdchamada_trgm']) {
+        subConditions.push(`LOWER(p.cdchamada) % ${addParam(fuzzyParam)}`);
+      } else {
+        subConditions.push(`LOWER(p.cdchamada) LIKE ${addParam(textParam)}`);
+      }
+
+      // 4. Document / CNPJ (Indexed)
+      if (indexMap['idx_pessoas_nrcgc_cic_trgm']) {
+        subConditions.push(`LOWER(p.nrcgc_cic) % ${addParam(fuzzyParam)}`);
+      } else {
+        subConditions.push(`LOWER(p.nrcgc_cic) LIKE ${addParam(textParam)}`);
+      }
+
+      // 5. Phones (Indexed split)
+      if (indexMap['idx_pessoas_telwa_trgm'] || indexMap['idx_pessoas_phones_trgm']) {
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
+      } else {
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${addParam(digitParam)}`);
+      }
+
+      if (indexMap['idx_pessoas_phone_trgm'] || indexMap['idx_pessoas_phones_trgm']) {
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
+      } else {
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${addParam(digitParam)}`);
+      }
+
+      // 6. Generic fields (Non-indexed, use LIKE)
+      const tp = addParam(textParam);
+      subConditions.push(`LOWER(p.nrincrest_rg) LIKE ${tp}`);
+      subConditions.push(`LOWER(p.email) LIKE ${tp}`);
+      subConditions.push(`LOWER(p.email2) LIKE ${tp}`);
+      subConditions.push(`LOWER(p.inscest_pfisica) LIKE ${tp}`);
+      subConditions.push(`TO_CHAR(cr.dtdatanasc, 'DD/MM/YYYY') LIKE ${tp}`);
+
+      if (token.length > 2) {
+        subConditions.push(`LOWER(COALESCE(p.nmendereco,'')) LIKE ${tp}`);
+        subConditions.push(`LOWER(COALESCE(p.nmbairro,'')) LIKE ${tp}`);
+        subConditions.push(`LOWER(COALESCE(p.nmcidade,'')) LIKE ${tp}`);
+      }
+
+      return `(${subConditions.join(' OR ')})`;
     });
+
+    const queryRaw = query.trim().toLowerCase();
+    const queryTrimmed = query.trim();
+
+    params.push(queryRaw);
+    const rawIdx = params.length;
+    
+    params.push(queryTrimmed);
+    const trimIdx = params.length;
 
     const sql = `
       SELECT p.idpessoa, p.cdchamada, p.nmpessoa, p.nmcurto, p.nrcgc_cic,
@@ -157,18 +249,21 @@ async function searchClient(query) {
              p.sttipopessoa, p.stvendedor,
              p.dtcadastro, p.dtultimacompra, p.aldesconto,
              t.dstabela AS tabela_preco,
-             cr.dtdatanasc, cr.sexo
+             cr.dtdatanasc, cr.sexo,
+             similarity(LOWER(p.nmpessoa), $${rawIdx}::text) as score
       FROM wshop.pessoas p
       LEFT JOIN wshop.tabelaprecos t ON p.idtabela = t.idtabela
       LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
       WHERE ${conditions.join(' AND ')}
       ORDER BY 
         CASE 
-          WHEN LOWER(p.nmpessoa) LIKE $1 THEN 1
-          WHEN LOWER(p.nmcurto) LIKE $1 THEN 2
-          WHEN LOWER(p.cdchamada) LIKE $1 THEN 0
-          ELSE 3 
+          WHEN p.cdchamada = $${trimIdx}::text THEN 0
+          WHEN LOWER(p.nmpessoa) = $${trimIdx}::text THEN 1
+          WHEN LOWER(p.nmpessoa) LIKE $1::text THEN 2
+          WHEN LOWER(p.nmcurto) LIKE $1::text THEN 3
+          ELSE 4 
         END,
+        score DESC,
         p.dtultimacompra DESC NULLS LAST
       LIMIT 25
     `;
@@ -260,7 +355,6 @@ async function getClientDashboard(rawIdPessoa) {
 
     if (await isOfflineMode()) {
       console.log('[DASHBOARD] Operando em modo offline. Buscando dados basicos no cache local.');
-      const { getLocalDb } = require('../localDb');
       const db = getLocalDb();
       const cached = db.prepare('SELECT * FROM client_cache WHERE idpessoa = ?').get(idpessoa);
       
@@ -366,6 +460,11 @@ async function getClientDashboard(rawIdPessoa) {
       getClientRanking(idpessoa)
     ]);
 
+    // Proactive background caching for offline reporting
+    cacheOfflineData(idpessoa, lastPurchases.rows, topProducts.rows).catch(e => 
+      console.error('[CACHE] Erro no warm-up do cache background:', e)
+    );
+
     const corrections = await ecoPool.query(
       'SELECT campo, valor_corrigido FROM correcoes_campos WHERE idpessoa = $1',
       [idpessoa]
@@ -404,7 +503,11 @@ async function getClientDashboard(rawIdPessoa) {
     });
     await applyTableNameOverlay(p, fixes);
 
+    const s = stats.rows[0] || {};
     const priorityData = {
+      idpessoa: idpessoa,
+      abc: ranking.abc || 'C',
+      freq_dias: s.freq_dias || 0,
       aniversario_hoje: isBirthdayToday(p.dtdatanasc),
       dias_sem_compra: daysSince(p.dtultimacompra),
       origem: 'SISTEMA',
@@ -412,14 +515,14 @@ async function getClientDashboard(rawIdPessoa) {
       criado_em: new Date()
     };
     
-    const priorityScore = intel.calculatePriority(priorityData);
-    const insights = intel.generateInsights(p, stats.rows[0] || {}, priorityData);
+    const priorityScore = await intel.calculatePriority(priorityData);
+    const insights = await intel.generateInsights(p, s, priorityData);
 
     return {
       profile: p,
       lastPurchases: lastPurchases.rows,
       topProducts: topProducts.rows,
-      stats: stats.rows[0] || {},
+      stats: s,
       paymentChannels: paymentChannels.rows,
       ranking,
       corrections: fixes,
@@ -439,7 +542,33 @@ async function getRecommendations(rawIdPessoa) {
   let idpessoa = '0';
   try {
     idpessoa = normalizeId(rawIdPessoa, 'idpessoa');
-    const result = await pool.query(`
+    
+    // 1. Fetch ML Recommendations (Affinity)
+    const mlRecs = await intel.getProductRecommendations(idpessoa, 5);
+    let mlResults = [];
+    
+    if (mlRecs.length > 0) {
+      const mlIds = mlRecs.map(r => r.idproduto);
+      const details = await pool.query(`
+        SELECT pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo
+        FROM wshop.produto pr
+        LEFT JOIN wshop.grupo g ON g.idgrupo = pr.idgrupo
+        WHERE pr.idproduto = ANY($1::varchar[])
+      `, [mlIds]);
+      
+      mlResults = details.rows.map(row => {
+        const rec = mlRecs.find(r => r.idproduto === row.idproduto);
+        return {
+          ...row,
+          source: 'ML',
+          reason: rec.reason_code,
+          affinity: rec.affinity_score
+        };
+      });
+    }
+
+    // 2. Fetch Heuristic Recommendations (Collaborative Filtering)
+    const heuristicResult = await pool.query(`
       WITH my_products AS (
         SELECT DISTINCT di.idproduto, pr.idgrupo
         FROM wshop.docitem di
@@ -462,7 +591,7 @@ async function getRecommendations(rawIdPessoa) {
           AND (d2.stdocumentocancelado IS NULL OR d2.stdocumentocancelado != 'S')
         LIMIT 100
       )
-      SELECT pr.cdchamada, pr.nmproduto, g.nmgrupo,
+      SELECT pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo,
              COUNT(DISTINCT di.idpessoa) AS clientes_similares,
              SUM(di.qtitem) AS qtd_vendida,
              COALESCE(mg.weight, 0) as group_affinity
@@ -475,12 +604,30 @@ async function getRecommendations(rawIdPessoa) {
         AND di.idproduto NOT IN (SELECT idproduto FROM my_products)
         AND d.tpoperacao = 'V'
         AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-      GROUP BY pr.cdchamada, pr.nmproduto, g.nmgrupo, mg.weight
+      GROUP BY pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo, mg.weight
       ORDER BY group_affinity DESC, clientes_similares DESC, qtd_vendida DESC
       LIMIT 10
     `, [idpessoa]);
 
-    return { rows: result.rows };
+    const heuristicResults = heuristicResult.rows.map(row => ({
+      ...row,
+      source: 'HEURISTIC',
+      reason: 'COMPRADO_POR_CLIENTES_SIMILARES'
+    }));
+
+    // 3. Merge Results (Prioritize ML, avoid duplicates)
+    const seen = new Set(mlResults.map(r => r.idproduto));
+    const merged = [...mlResults];
+    
+    for (const h of heuristicResults) {
+      if (!seen.has(h.idproduto)) {
+        merged.push(h);
+        seen.add(h.idproduto);
+      }
+      if (merged.length >= 12) break;
+    }
+
+    return { rows: merged };
   } catch (e) {
     await logError('RECOMMENDATIONS', e, idpessoa);
     return { error: e.message };

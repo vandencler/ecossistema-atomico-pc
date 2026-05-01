@@ -1,5 +1,6 @@
 const { pool, ecoPool } = require('../db');
 const { logEvent, logError } = require('./logService');
+const { trackEvent } = require('./telemetryService');
 const { FIELD_CONFIG, isBirthdayToday, daysSince } = require('../utils');
 const intel = require('./intelligenceService');
 const notifier = require('./notificationService');
@@ -68,67 +69,88 @@ async function logActionHistory(client, { actionId, fromStatus, toStatus, usuari
   `, [actionId, fromStatus, toStatus, usuario, motivo || '']);
 }
 
-function transitionSql(toStatus) {
+function transitionSql(toStatus, actor, reason) {
   if (toStatus === ACTION_STATUS.APPROVED) {
-    return `
-      status = 'APROVADO',
-      aprovado_por = $2,
-      aprovado_em = NOW(),
-      rejeitado_por = NULL,
-      rejeitado_em = NULL,
-      erro_msg = NULL
-    `;
+    return {
+      sql: `
+        status = 'APROVADO',
+        aprovado_por = $2,
+        aprovado_em = NOW(),
+        rejeitado_por = NULL,
+        rejeitado_em = NULL,
+        erro_msg = NULL
+      `,
+      params: [actor]
+    };
   }
   if (toStatus === ACTION_STATUS.REJECTED) {
-    return `
-      status = 'REJEITADO',
-      rejeitado_por = $2,
-      rejeitado_em = NOW(),
-      erro_msg = NULLIF($3, '')
-    `;
+    return {
+      sql: `
+        status = 'REJEITADO',
+        rejeitado_por = $2,
+        rejeitado_em = NOW(),
+        erro_msg = NULLIF($3, '')
+      `,
+      params: [actor, reason]
+    };
   }
   if (toStatus === ACTION_STATUS.PENDING) {
-    return `
-      status = 'PENDENTE',
-      aprovado_por = NULL,
-      aprovado_em = NULL,
-      rejeitado_por = NULL,
-      rejeitado_em = NULL,
-      executado_por = NULL,
-      execucao_iniciada_em = NULL,
-      erro_msg = NULL
-    `;
+    return {
+      sql: `
+        status = 'PENDENTE',
+        aprovado_por = NULL,
+        aprovado_em = NULL,
+        rejeitado_por = NULL,
+        rejeitado_em = NULL,
+        executado_por = NULL,
+        execucao_iniciada_em = NULL,
+        erro_msg = NULL
+      `,
+      params: []
+    };
   }
   if (toStatus === ACTION_STATUS.EXECUTING) {
-    return `
-      status = 'EM_EXECUCAO',
-      executado_por = $2,
-      execucao_iniciada_em = NOW(),
-      erro_msg = NULL
-    `;
+    return {
+      sql: `
+        status = 'EM_EXECUCAO',
+        executado_por = $2,
+        execucao_iniciada_em = NOW(),
+        erro_msg = NULL
+      `,
+      params: [actor]
+    };
   }
   if (toStatus === ACTION_STATUS.DONE) {
-    return `
-      status = 'CONCLUIDO',
-      executado_por = COALESCE(executado_por, $2),
-      executado_em = NOW(),
-      erro_msg = NULL
-    `;
+    return {
+      sql: `
+        status = 'CONCLUIDO',
+        executado_por = COALESCE(executado_por, $2),
+        executado_em = NOW(),
+        erro_msg = NULL
+      `,
+      params: [actor]
+    };
   }
   if (toStatus === ACTION_STATUS.ERROR) {
-    return `
-      status = 'ERRO',
-      executado_por = COALESCE(executado_por, $2),
-      executado_em = NOW(),
-      erro_msg = NULLIF($3, '')
-    `;
+    return {
+      sql: `
+        status = 'ERRO',
+        executado_por = COALESCE(executado_por, $2),
+        executado_em = NOW(),
+        erro_msg = NULLIF($3, '')
+      `,
+      params: [actor, reason]
+    };
   }
   if (toStatus === ACTION_STATUS.CANCELED) {
-    return `
-      status = 'CANCELADO',
-      executado_em = NOW(),
-      erro_msg = NULLIF($3, '')
-    `;
+    return {
+      sql: `
+        status = 'CANCELADO',
+        executado_em = NOW(),
+        erro_msg = NULLIF($2, '')
+      `,
+      params: [reason]
+    };
   }
   throw new Error(`Status de destino invalido: ${toStatus}`);
 }
@@ -160,11 +182,14 @@ async function transitionAction(client, { id, toStatus, usuario, motivo = '', re
     throw new Error('Motivo de rejeicao obrigatorio');
   }
 
+  const result = transitionSql(status, actor, reason);
+  const params = [actionId, ...result.params];
+
   await client.query(`
     UPDATE acoes_pendentes
-    SET ${transitionSql(status)}
+    SET ${result.sql}
     WHERE id = $1
-  `, [actionId, actor, reason]);
+  `, params);
 
   await logActionHistory(client, {
     actionId,
@@ -241,7 +266,7 @@ async function hydrateQueueRows(rows) {
       dias_sem_compra: daysSince(person.dtultimacompra),
       horas_na_fila: Math.max(0, Math.floor((Date.now() - new Date(row.criado_em).getTime()) / 3600000))
     };
-    const prioridade_score = intel.calculatePriority(base);
+    const prioridade_score = await intel.calculatePriority(base);
     const valor_atual = await readCurrentValue(base);
     hydrated.push({
       ...base,
@@ -348,6 +373,8 @@ async function reviewActions(payload = {}) {
     await client.query('BEGIN');
 
     const results = [];
+    const approvedActions = []; // Keep track of what we approved for WhatsApp
+
     for (const id of actionIds) {
       const action = await transitionAction(client, {
         id,
@@ -357,9 +384,13 @@ async function reviewActions(payload = {}) {
         requireCurrent: ACTION_STATUS.PENDING
       });
       results.push({ id, status: action.status });
+      if (decision === ACTION_STATUS.APPROVED) {
+        approvedActions.push(action);
+      }
     }
 
     await client.query('COMMIT');
+
     await logEvent(
       decision === ACTION_STATUS.APPROVED ? 'SAV_ACTION_APPROVED' : 'SAV_ACTION_REJECTED',
       '0',
