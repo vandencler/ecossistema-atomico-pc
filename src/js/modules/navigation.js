@@ -4,6 +4,7 @@ import { loadSavQueue } from '../ui/sav.js';
 import { loadSyncModule } from '../ui/sync.js';
 import { loadConfigModule } from '../ui/config.js';
 import { loadHealthModule } from '../ui/health.js';
+import { loadDashboardModule } from '../ui/dashboard.js';
 import { api } from '../api.js';
 
 let currentCallbacks = {};
@@ -63,6 +64,7 @@ export function switchModule(name, onOpenClient, onOpenWhatsApp) {
   });
 
   if (name === 'aniversarios') loadBirthdayModule(onOpenClient);
+  if (name === 'dashboard') loadDashboardModule();
   if (name === 'sav') loadSavQueue(onOpenClient, onOpenWhatsApp);
   if (name === 'sync') loadSyncModule();
   if (name === 'config') loadConfigModule();

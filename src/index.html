@@ -24,6 +24,9 @@
       <button class="nav-btn active" data-module="clientes" type="button">
         <span class="nav-icon">C</span><span class="nav-label">Clientes</span>
       </button>
+      <button class="nav-btn" data-module="dashboard" type="button">
+        <span class="nav-icon">D</span><span class="nav-label">Dashboard</span>
+      </button>
       <button class="nav-btn" data-module="aniversarios" type="button">
         <span class="nav-icon">A</span><span class="nav-label">Aniversarios</span>
       </button>
@@ -68,6 +71,47 @@
           <div class="tab-content" id="tab-cadastro" hidden></div>
 
           <div class="whatsapp-bar" id="whatsapp-bar"></div>
+        </div>
+      </div>
+
+      <div class="module" id="mod-dashboard" hidden>
+        <div class="dashboard-header">
+          <div class="dashboard-title">Painel Estratégico (CTO)</div>
+          <button class="dashboard-refresh" id="dashboard-refresh" type="button">Atualizar Metricas</button>
+        </div>
+        
+        <div class="dashboard-metrics" id="dashboard-metrics">
+          <!-- Metric cards will be rendered here -->
+        </div>
+
+        <div class="dashboard-section">
+          <div class="dashboard-section-title">Exportação em Massa & Analytics</div>
+          <div class="export-grid">
+            <div class="export-card">
+              <div class="export-card-title">Prioridade CRÍTICA</div>
+              <p>Exportar todos os clientes com acoes urgentes na fila SAV.</p>
+              <div class="export-actions">
+                <button class="btn-export-pdf" data-bucket="critical" data-format="pdf">PDF</button>
+                <button class="btn-export-excel" data-bucket="critical" data-format="excel">Excel</button>
+              </div>
+            </div>
+            <div class="export-card">
+              <div class="export-card-title">Prioridade ALTA</div>
+              <p>Relatorio de clientes com scores elevados (ABC A/B).</p>
+              <div class="export-actions">
+                <button class="btn-export-pdf" data-bucket="high" data-format="pdf">PDF</button>
+                <button class="btn-export-excel" data-bucket="high" data-format="excel">Excel</button>
+              </div>
+            </div>
+            <div class="export-card">
+              <div class="export-card-title">Base Geral</div>
+              <p>Exportar amostragem de clientes ativos (Hot/Warm).</p>
+              <div class="export-actions">
+                <button class="btn-export-pdf" data-bucket="normal" data-format="pdf">PDF</button>
+                <button class="btn-export-excel" data-bucket="normal" data-format="excel">Excel</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -220,6 +220,36 @@ ipcMain.handle('get-health', safeInvoke(() => checkHealth()));
 ipcMain.handle('run-reconciliation', safeInvoke(() => reconcileCorrections()));
 ipcMain.handle('open-whatsapp', safeInvoke((e, p) => uiService.openWhatsApp(p)));
 
+ipcMain.handle('get-executive-metrics', async () => {
+  try {
+    const { ecoPool, pool } = require('./src/main/db');
+    
+    const savRes = await ecoPool.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'PENDENTE') as pending FROM acoes_pendentes");
+    const waRes = await ecoPool.query("SELECT COUNT(*) as total FROM omnichannel_mensagens WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'");
+    const clientRes = await ecoPool.query("SELECT COUNT(*) as total FROM ml_churn_risk WHERE risk_score > 70");
+    
+    return {
+      sav: {
+        total: parseInt(savRes.rows[0].total),
+        pending: parseInt(savRes.rows[0].pending)
+      },
+      whatsapp: {
+        recent: parseInt(waRes.rows[0].total)
+      },
+      intelligence: {
+        high_risk: parseInt(clientRes.rows[0].total)
+      },
+      system: {
+        version: 'v1.1.2',
+        status: 'OPTIMIZED'
+      }
+    };
+  } catch (e) {
+    console.error('[IPC ERROR] Executive metrics failed:', e.message);
+    return { error: e.message };
+  }
+});
+
 ipcMain.handle('export-client-data', async (event, idpessoa, format) => {
   try {
     const ext = format === 'pdf' ? 'pdf' : 'xlsx';

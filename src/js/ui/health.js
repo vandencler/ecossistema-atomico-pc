@@ -1,6 +1,6 @@
 import { $, create, setChildren, stateMessage } from '../utils.js';
 import { api } from '../api.js';
-import { MetricCard, StatusBadge } from './components.js';
+import { MetricCard, StatusBadge, ActionGroup, IconButton } from './components.js';
 
 export async function loadHealthModule() {
   const container = $('health-dashboard-container');
@@ -31,7 +31,9 @@ function renderHealthDashboard(container, health) {
       { label: 'Clientes em Cache', value: health.databases.ecosystem.cacheRows, type: 'info' }
     ]),
 
-    renderTelemetrySection(health.telemetry, health.syncMetrics)
+    renderTelemetrySection(health.telemetry, health.syncMetrics),
+    
+    renderAnalyticalReports()
   ];
 
   setChildren(container, sections);
@@ -44,6 +46,37 @@ function renderSystemStatus(health) {
       type: isHealthy ? 'success' : 'error' 
     }),
     create('div', { className: 'health-timestamp', text: `Última verificação: ${new Date(health.timestamp).toLocaleString()}` })
+  ]);
+}
+
+function renderAnalyticalReports() {
+  const exportPriority = async (bucket, format) => {
+    try {
+      const res = await api.bulkExportByPriority(bucket, format);
+      if (res?.ok) {
+        console.log(`Relatório de prioridade ${bucket} (${format}) exportado.`);
+      } else if (res?.error) {
+        alert(`Erro ao exportar: ${res.error}`);
+      }
+    } catch (e) {
+      alert(`Erro: ${e.message}`);
+    }
+  };
+
+  return create('div', { className: 'health-section' }, [
+    create('div', { className: 'health-section-title', text: 'Relatórios Analíticos de Gestão' }),
+    create('div', { className: 'analytical-grid' }, [
+      { label: 'Clientes Prioridade A (Diamante)', bucket: 'A', color: 'sav-open-btn' },
+      { label: 'Clientes Prioridade B (Ouro)', bucket: 'B', color: 'sav-history-btn' },
+      { label: 'Clientes Prioridade C (Prata)', bucket: 'C', color: '' }
+    ].map(item => create('div', { className: 'analytical-row' }, [
+        create('span', { text: item.label }),
+        ActionGroup([
+          IconButton('📄 PDF', () => exportPriority(item.bucket, 'pdf'), { className: item.color }),
+          IconButton('📊 XLS', () => exportPriority(item.bucket, 'excel'), { className: item.color })
+        ])
+      ]))
+    )
   ]);
 }
 
