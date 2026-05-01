@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('atomico', {
   getSystemConfigs: () => ipcRenderer.invoke('get-system-configs'),
   setSystemConfig: (c, v) => ipcRenderer.invoke('set-system-config', c, v),
   getHealth: () => ipcRenderer.invoke('get-health'),
+  getExecutiveMetrics: () => ipcRenderer.invoke('get-executive-metrics'),
   runReconciliation: () => ipcRenderer.invoke('run-reconciliation'),
   openWhatsApp: (data) => ipcRenderer.invoke('open-whatsapp', data),
   exportClientData: (id, format) => ipcRenderer.invoke('export-client-data', id, format),

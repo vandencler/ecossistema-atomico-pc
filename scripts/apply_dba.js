@@ -19,7 +19,7 @@ async function runDBA() {
       $$;
     `);
 
-    await client.query(`CREATE SCHEMA IF NOT EXISTS wshop;`);
+    await client.query('CREATE SCHEMA IF NOT EXISTS wshop;');
     
     // Create table se não existir para o ambiente local
     await client.query(`
@@ -42,13 +42,13 @@ async function runDBA() {
 
     console.log('Executando os comandos...');
 
-    await client.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
-    await client.query(`GRANT SELECT ON wshop.pessoas TO eav_reader;`);
+    await client.query('CREATE EXTENSION IF NOT EXISTS pg_trgm;');
+    await client.query('GRANT SELECT ON wshop.pessoas TO eav_reader;');
     
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_pessoas_nmpessoa_trgm ON wshop.pessoas USING gin (LOWER(nmpessoa) gin_trgm_ops);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_pessoas_nmcurto_trgm ON wshop.pessoas USING gin (LOWER(nmcurto) gin_trgm_ops);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_pessoas_cdchamada_trgm ON wshop.pessoas USING gin (LOWER(cdchamada) gin_trgm_ops);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_pessoas_nrcgc_cic_trgm ON wshop.pessoas USING gin (LOWER(nrcgc_cic) gin_trgm_ops);`);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pessoas_nmpessoa_trgm ON wshop.pessoas USING gin (LOWER(nmpessoa) gin_trgm_ops);');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pessoas_nmcurto_trgm ON wshop.pessoas USING gin (LOWER(nmcurto) gin_trgm_ops);');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pessoas_cdchamada_trgm ON wshop.pessoas USING gin (LOWER(cdchamada) gin_trgm_ops);');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_pessoas_nrcgc_cic_trgm ON wshop.pessoas USING gin (LOWER(nrcgc_cic) gin_trgm_ops);');
     
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_pessoas_telwa_trgm ON wshop.pessoas USING gin (
@@ -62,16 +62,16 @@ async function runDBA() {
       );
     `);
 
-    await client.query(`ANALYZE wshop.pessoas;`);
+    await client.query('ANALYZE wshop.pessoas;');
 
-    await client.query(`GRANT USAGE ON SCHEMA wshop TO eav_writer;`);
-    await client.query(`GRANT USAGE ON SCHEMA wshop TO eav_reader;`);
+    await client.query('GRANT USAGE ON SCHEMA wshop TO eav_writer;');
+    await client.query('GRANT USAGE ON SCHEMA wshop TO eav_reader;');
 
-    await client.query(`GRANT SELECT, UPDATE ON wshop.pessoas TO eav_writer;`);
-    await client.query(`GRANT SELECT, UPDATE ON wshop.crediar TO eav_writer;`);
+    await client.query('GRANT SELECT, UPDATE ON wshop.pessoas TO eav_writer;');
+    await client.query('GRANT SELECT, UPDATE ON wshop.crediar TO eav_writer;');
 
-    await client.query(`GRANT SELECT ON wshop.pessoas TO eav_reader;`);
-    await client.query(`GRANT SELECT ON wshop.crediar TO eav_reader;`);
+    await client.query('GRANT SELECT ON wshop.pessoas TO eav_reader;');
+    await client.query('GRANT SELECT ON wshop.crediar TO eav_reader;');
 
     console.log('Comandos DBA executados com sucesso!');
   } catch (err) {

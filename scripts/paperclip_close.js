@@ -41,14 +41,14 @@ async function request(method, path, body = null) {
 async function run() {
   try {
     // EAV-81: UI Component Library Integration
-    const issueId81 = "dfe23440-d152-4dd9-8837-482fe594d905";
-    await request('POST', `/api/issues/${issueId81}/checkout`, { agentId, expectedStatuses: ["in_progress"] });
+    const issueId81 = 'dfe23440-d152-4dd9-8837-482fe594d905';
+    await request('POST', `/api/issues/${issueId81}/checkout`, { agentId, expectedStatuses: ['in_progress'] });
     await request('PATCH', `/api/issues/${issueId81}`, { status: 'done', comment: 'Integration complete. I verified that `src/js/ui/components.js` acts as the single source of truth for UI primitives (`MetricCard`, `StatusBadge`, `ActionGroup`, `IconButton`, `DiffBox`). Both `clientes.js` and `sav.js` consume these standardized components exclusively, ensuring a cohesive and modern visual language across the platform.' });
     console.log('EAV-81 closed');
 
     // EAV-82: Report Export Rollout
-    const issueId82 = "0043aea6-d690-4d36-b5e0-3b05d6473a66";
-    await request('POST', `/api/issues/${issueId82}/checkout`, { agentId, expectedStatuses: ["in_progress"] });
+    const issueId82 = '0043aea6-d690-4d36-b5e0-3b05d6473a66';
+    await request('POST', `/api/issues/${issueId82}/checkout`, { agentId, expectedStatuses: ['in_progress'] });
     await request('PATCH', `/api/issues/${issueId82}`, { status: 'done', comment: 'Rollout complete. The `exportService.js` natively generates PDF and Excel formats using `pdfmake` and `exceljs`. These capabilities are exposed via IPC and accessible in the Client Dashboard header, allowing the sales team to extract insights offline. Tests are passing and build packaging has been verified.' });
     console.log('EAV-82 closed');
 

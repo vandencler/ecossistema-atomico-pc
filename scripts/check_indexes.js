@@ -27,6 +27,12 @@ async function check() {
 
     const found = res.rows.map(r => r.indexname);
     
+    // Check Extension
+    console.log('\n[Extensões]');
+    const extRes = await pool.query("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'");
+    const hasTrgm = extRes.rows.length > 0;
+    console.log(`${hasTrgm ? '✅' : '❌'} pg_trgm`);
+
     // Check Core
     console.log('\n[Core Indexes]');
     coreIndexes.forEach(idx => {
@@ -39,7 +45,7 @@ async function check() {
     const hasLegacy = found.includes(legacyPhoneIndex);
 
     splitPhoneIndexes.forEach(idx => {
-      let status = found.includes(idx) ? '✅' : (hasLegacy ? '🟡 (legacy)' : '❌');
+      const status = found.includes(idx) ? '✅' : (hasLegacy ? '🟡 (legacy)' : '❌');
       console.log(`${status} ${idx}`);
     });
 

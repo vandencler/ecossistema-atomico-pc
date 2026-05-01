@@ -50,7 +50,7 @@ function updateIssuesFile(fileName) {
 
   if (updated) {
     // Write back using utf16le if that was the original encoding (node's JSON.stringify with utf16le needs careful handling if BOM is expected)
-    let newData = JSON.stringify(issues, null, 2);
+    const newData = JSON.stringify(issues, null, 2);
     if (encoding === 'utf16le') {
       const bom = Buffer.from([0xFF, 0xFE]);
       const dataBuf = Buffer.from(newData, 'utf16le');

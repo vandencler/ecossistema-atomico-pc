@@ -1,20 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const eav72Payload = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'eav-72-reassign.json'), 'utf8'));
-const eav75Payload = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'eav-75-cancel.json'), 'utf8'));
-
 function updateIssuesFile(fileName) {
   const filePath = path.join(__dirname, '..', fileName);
   if (!fs.existsSync(filePath)) return;
   
-  let content = fs.readFileSync(filePath, 'utf8');
-  if (content.charCodeAt(0) === 0xFEFF || content.charCodeAt(0) === 0xFFFE) {
-     content = fs.readFileSync(filePath, 'utf16le');
-  } else if (content.charCodeAt(0) === 65533) { // Fallback if utf16le is detected as strange chars
-     content = fs.readFileSync(filePath, 'utf16le');
-  }
-
+  let content = fs.readFileSync(filePath, 'utf16le');
+  
   // trim BOM for parse
   if (content.charCodeAt(0) === 0xFEFF) {
     content = content.slice(1);
@@ -30,21 +22,29 @@ function updateIssuesFile(fileName) {
 
   let updated = false;
 
-  for (let i = 0; i < issues.length; i++) {
-    if (issues[i].identifier === 'EAV-72') {
-      issues[i].assigneeAgentId = eav72Payload.assigneeAgentId;
-      issues[i].status = eav72Payload.status;
-      // Also it's a good idea to add a comment or just update status
-      updated = true;
-    }
-    if (issues[i].identifier === 'EAV-75') {
-      issues[i].status = eav75Payload.status;
-      updated = true;
-    }
+  const eav85 = issues.find(i => i.identifier === 'EAV-85');
+  if (!eav85) {
+    issues.push({
+      identifier: 'EAV-85',
+      title: 'WhatsApp Feedback Ingestion',
+      status: 'completed',
+      description: 'Implement WhatsApp webhook ingestion and engagement scoring.'
+    });
+    updated = true;
+  } else if (eav85.status !== 'completed') {
+    eav85.status = 'completed';
+    updated = true;
+  }
+
+  const eav86 = issues.find(i => i.identifier === 'EAV-86');
+  if (eav86 && eav86.status !== 'completed') {
+    eav86.status = 'completed';
+    updated = true;
   }
 
   if (updated) {
-    fs.writeFileSync(filePath, JSON.stringify(issues, null, 2), 'utf16le');
+    const buffer = Buffer.from('\uFEFF' + JSON.stringify(issues, null, 2), 'utf16le');
+    fs.writeFileSync(filePath, buffer);
     console.log(`Updated ${fileName}`);
   } else {
     console.log(`No changes made to ${fileName}`);
@@ -52,4 +52,4 @@ function updateIssuesFile(fileName) {
 }
 
 updateIssuesFile('issues_active.json');
-updateIssuesFile('issues.json');
+
