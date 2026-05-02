@@ -56,4 +56,12 @@ O EAV analisa o comportamento de compra de cada cliente e te avisa:
 Use os badges para decidir para quem ligar primeiro e bata sua meta mais rápido! 🧠📈
 
 ---
-*Instruções para o CMO: Enviar a Mensagem 1 às 08h00 e as pílulas ao longo do dia.*
+---
+
+### Mensagem 5: Pílula de Conhecimento #4 (Oportunidade Sorocaba)
+**Dica Pro: Ouro em Sorocaba! 🪙**
+
+Sabia que identificamos mais de 8.000 clientes em Sorocaba que têm perfil de "Giro Alto", mas ainda compram pouco de nós? 
+
+Nas suas recomendações, procure pelo badge **Sucesso na Região** ✨. São sugestões baseadas no que os grandes clientes da sua cidade mais compram. É a venda certeira para aumentar seu ticket! 🚀🎯
+

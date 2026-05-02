@@ -1,8 +1,8 @@
 
 const cwd = process.cwd();
-if (!cwd.toLowerCase().includes("-pc")) {
+if (!cwd.toLowerCase().includes('-pc')) {
     console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
-    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    console.error('This script MUST be executed from D:\projetos\ecossistema-atomico-pc');
     process.exit(1);
 }
 
@@ -120,12 +120,11 @@ function evaluateChurnModel() {
   const biasPath = path.join(process.cwd(), 'ml_data', 'product_gender_bias.json');
   const profileFile = path.join(process.cwd(), 'ml_data', 'ml_client_profiles.csv');
   
+  let totalGenderedRecs = 0;
+  let alignedRecs = 0;
+
   if (fs.existsSync(biasPath) && fs.existsSync(profileFile)) {
-    const productBias = JSON.parse(fs.readFileSync(biasPath, 'utf8'));
     const profiles = fs.readFileSync(profileFile, 'utf8').split('\n').filter(Boolean).slice(1);
-    
-    let totalGenderedRecs = 0;
-    let alignedRecs = 0;
 
     // Sample validation
     profiles.slice(0, 500).forEach(row => {
@@ -160,6 +159,10 @@ function evaluateChurnModel() {
     version: 'v1.2-supervised-sim',
     metrics: { accuracy, precision, recall, f1 },
     counts: { tp, fp, tn, fn },
+    affinity_evaluation: {
+      simulated_hit_rate: affinityRecall,
+      gender_alignment_pct: (alignedRecs / totalGenderedRecs) * 100
+    },
     ab_test_simulation: {
       split: abGroups,
       description: 'Deterministic 50/50 split based on MD5 hash of idpessoa'

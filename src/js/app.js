@@ -16,10 +16,35 @@ import { setupSearch } from './modules/search.js';
 import { openClient, openWhatsApp } from './modules/dashboard.js';
 import { setupCorrections } from './modules/corrections.js';
 import { setupFeedback } from './ui/feedback.js';
+import { MaintenanceBanner } from './ui/components.js';
 
 let isDragging = false;
 let dragStartY = 0;
 let dragMoved = false;
+
+async function checkSystemHealth() {
+  try {
+    const health = await api.getHealth();
+    const content = $('module-content');
+    
+    // Remove existing banner
+    content.querySelector('.maintenance-banner')?.remove();
+
+    if (health.status !== 'HEALTHY') {
+      let message = 'Atenção: O sistema está operando em modo degradado.';
+      if (health.databases.mirror.status !== 'OK') {
+        message = 'Conexão com o banco de dados ERP instável. Algumas informações podem não estar disponíveis.';
+      } else if (!health.databases.mirror.indexesOptimized) {
+        message = 'Busca do ERP operando em modo lento (índices ausentes). Evite termos muito genéricos.';
+      }
+
+      const banner = MaintenanceBanner(message, { closable: true });
+      content.insertBefore(banner, content.firstChild);
+    }
+  } catch (e) {
+    console.warn('[UI] Falha ao verificar saúde do sistema:', e);
+  }
+}
 
 function setSidebarState(expanded, source = 'unknown') {
   const tab = $('collapsed-tab');
@@ -114,6 +139,8 @@ function setupNotifications() {
   setupSearch(openClient); console.log('[UI] Search setup done');
   setupCorrections();
   setupFeedback(); console.log('[UI] Feedback setup done');
+  
+  checkSystemHealth();
   
   const expanded = await api.getSidebarState();
   setSidebarState(expanded, 'INIT');

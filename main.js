@@ -1,4 +1,4 @@
-﻿const { pool, ecoPool, settings } = require('./src/main/db');
+const { pool, ecoPool, settings } = require('./src/main/db');
 const { initLocalDb } = require('./src/main/localDb');
 const { logEvent, logError } = require('./src/main/services/logService');
 const {
@@ -43,7 +43,6 @@ autoUpdater.on('update-available', () => {
 
 autoUpdater.on('update-downloaded', () => {
   logEvent('SYSTEM_UPDATE', '0', 'Download concluido. Instalacao na proxima inicializacao.');
-  // Optionally, we could prompt the user here using dialog.showMessageBox to restart immediately.
 });
 
 autoUpdater.on('error', (err) => {
@@ -117,12 +116,10 @@ function createWindow() {
 
   mainWindow.on('blur', () => {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    console.log('[MAIN] Window blurred, forcing AlwaysOnTop');
   });
 
   mainWindow.on('focus', () => {
     if (!uiService.getState()) mainWindow.setOpacity(1.0);
-    console.log('[MAIN] Window focused');
   });
 
   screen.on('display-metrics-changed', () => uiService.handleDisplayMetricsChanged());
@@ -136,10 +133,9 @@ const safeInvoke = (handler, validator = (x) => x) => async (event, ...args) => 
   try {
     const validatedArgs = args.map((arg, i) => validator(arg, i));
     const result = await handler(event, ...validatedArgs);
-    
-    // Performance Telemetry
+
     const duration = Date.now() - start;
-    if (duration > 100) { // Only track slower calls to avoid noise
+    if (duration > 100) {
       trackEvent('ipc_perf_low', 'sistema', { channel, duration_ms: duration }).catch(() => {});
     }
 
@@ -201,13 +197,10 @@ ipcMain.handle('get-batch-sql', async () => {
 
     const fs = require('fs').promises;
     await fs.writeFile(filePath, result.sql, 'utf8');
-    
-    // Mark items as exported in the database
+
     if (result.ids && result.ids.length > 0) {
       const loteId = await markBatchAsExported(result.ids);
       await logEvent('SAV_BATCH_EXPORT', '0', `Script de lote ${loteId} exportado para: ${filePath} (${result.ids.length} itens)`);
-    } else {
-      await logEvent('SAV_BATCH_EXPORT', '0', `Script de lote vazio exportado para: ${filePath}`);
     }
 
     return { ok: true, filePath };
@@ -236,8 +229,7 @@ ipcMain.handle('get-app-identity', () => getIdentity());
 ipcMain.handle('set-app-identity', safeInvoke(async (e, id) => {
   const oldId = getIdentity();
   setIdentity(id);
-  
-  // Phase 6: Send welcome message via WhatsApp if it's a new identity
+
   if (id && id !== oldId) {
     const omnichannelService = require('./src/main/services/omnichannelService');
     omnichannelService.sendWelcomeMessage(id).catch(err => {
@@ -254,7 +246,7 @@ ipcMain.handle('track-event', safeInvoke((e, data) => trackEvent(data.name, data
 // Help Domain
 ipcMain.handle('get-help-content', safeInvoke(async (event, fileName) => {
   const fs = require('fs').promises;
-  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, ''); // Basic sanitization
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '');
   const filePath = path.join(__dirname, 'docs', 'onboarding', safeName);
   try {
     return await fs.readFile(filePath, 'utf8');
@@ -267,20 +259,20 @@ ipcMain.handle('get-help-content', safeInvoke(async (event, fileName) => {
 ipcMain.handle('get-executive-metrics', async () => {
   try {
     const { ecoPool } = require('./src/main/db');
-    
+
     const savRes = await ecoPool.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'PENDENTE') as pending FROM acoes_pendentes");
     const waRes = await ecoPool.query("SELECT COUNT(*) as total FROM omnichannel_mensagens WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'");
     const clientRes = await ecoPool.query('SELECT COUNT(*) as total FROM ml_churn_risk WHERE risk_score > 70');
-    
-    // Lookalike Opportunities (Sorocaba region with high priority)
+
     const lookalikeRes = await ecoPool.query(`
-      SELECT COUNT(*) as total 
-      FROM ml_client_profiles 
+      SELECT COUNT(*) as total
+      FROM ml_client_profiles
       WHERE cidade = 'Sorocaba' AND stcredbloqueado = false
     `);
 
     const npsSummary = await npsService.getSummary();
-    
+    const health = await checkHealth();
+
     return {
       sav: {
         total: parseInt(savRes.rows[0].total),
@@ -295,8 +287,9 @@ ipcMain.handle('get-executive-metrics', async () => {
       },
       nps: npsSummary,
       system: {
-        version: 'v1.1.2',
-        status: 'OPTIMIZED'
+        version: 'v1.1.4',
+        status: health.status === 'HEALTHY' ? 'OPTIMIZED' : 'DEGRADED',
+        maintenance: health.status === 'DEGRADED'
       }
     };
   } catch (e) {
@@ -308,10 +301,10 @@ ipcMain.handle('get-executive-metrics', async () => {
 ipcMain.handle('export-client-data', async (event, idpessoa, format) => {
   try {
     const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-    const filters = format === 'pdf' 
-      ? [{ name: 'PDF', extensions: ['pdf'] }] 
+    const filters = format === 'pdf'
+      ? [{ name: 'PDF', extensions: ['pdf'] }]
       : [{ name: 'Excel', extensions: ['xlsx'] }];
-      
+
     const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
       title: 'Exportar Relatorio do Cliente',
       defaultPath: `Cliente_${idpessoa}_${new Date().toISOString().split('T')[0]}.${ext}`,
@@ -330,10 +323,10 @@ ipcMain.handle('export-client-data', async (event, idpessoa, format) => {
 ipcMain.handle('bulk-export-clients', async (event, ids, format) => {
   try {
     const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-    const filters = format === 'pdf' 
-      ? [{ name: 'PDF', extensions: ['pdf'] }] 
+    const filters = format === 'pdf'
+      ? [{ name: 'PDF', extensions: ['pdf'] }]
       : [{ name: 'Excel', extensions: ['xlsx'] }];
-      
+
     const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
       title: 'Exportar Relatorio em Lote',
       defaultPath: `Lote_Clientes_${new Date().toISOString().split('T')[0]}.${ext}`,
@@ -352,10 +345,10 @@ ipcMain.handle('bulk-export-clients', async (event, ids, format) => {
 ipcMain.handle('bulk-export-priority', async (event, priorityBucket, format) => {
   try {
     const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-    const filters = format === 'pdf' 
-      ? [{ name: 'PDF', extensions: ['pdf'] }] 
+    const filters = format === 'pdf'
+      ? [{ name: 'PDF', extensions: ['pdf'] }]
       : [{ name: 'Excel', extensions: ['xlsx'] }];
-      
+
     const { canceled, filePath } = await dialog.showSaveDialog(uiService.mainWindow, {
       title: `Exportar Prioridade ${priorityBucket.toUpperCase()}`,
       defaultPath: `Prioridade_${priorityBucket}_${new Date().toISOString().split('T')[0]}.${ext}`,
@@ -364,6 +357,7 @@ ipcMain.handle('bulk-export-priority', async (event, priorityBucket, format) => 
 
     if (canceled || !filePath) return { canceled: true };
 
+    const { bulkExportByPriority } = require('./src/main/services/exportService');
     return await bulkExportByPriority(priorityBucket, format, filePath);
   } catch (e) {
     console.error('[IPC ERROR] Bulk Export Priority failed:', e.message);
@@ -374,24 +368,18 @@ ipcMain.handle('bulk-export-priority', async (event, priorityBucket, format) => 
 // --- Startup & Lifecycle ---
 
 app.whenReady().then(async () => {
-  // 1. Initial Checks
   await runPreFlight();
 
-  // 1b. Initialize Identity
   const savedIdentity = await getConfigValue('app_identity');
   if (savedIdentity) setIdentity(savedIdentity);
 
-  // 2. Local State
   initLocalDb(app.getPath('userData'));
 
-  // 3. UI
   await uiService.initializeState();
   createWindow();
 
-  // 4. Background Services
   await checkHealth();
 
-  // Start Auto-Sync based on hierarchy: File Settings > DB Settings > Default (10m)
   if (settings.autoSync) {
     startAutoSync(settings.syncInterval * 60000);
   } else {
@@ -402,38 +390,33 @@ app.whenReady().then(async () => {
     }
   }
 
-  // 4b. Setup Real-Time Sync Listener
   setupRealTimeListener();
 
-  // 5. Periodic Maintenance
-  // Stagger background tasks to avoid connection spikes on startup
-  const staggerDelay = Math.floor(Math.random() * 600000); // Up to 10 minutes
-  
+  const staggerDelay = Math.floor(Math.random() * 600000);
+
   setTimeout(() => {
     warmUpCache();
-    setInterval(() => warmUpCache(), 7200000); // 2h
+    setInterval(() => warmUpCache(), 7200000);
   }, staggerDelay);
 
-  setInterval(() => checkHealth(), 1800000); // 30m
-  setInterval(() => reconcileCorrections(), 43200000); // 12h
-  setInterval(() => flushTelemetry(), 900000); // 15m
-  setInterval(() => npsService.runCycle(), 43200000); // 12h
-  setInterval(() => uiService.revalidateBounds(), 5000); // 1m check
+  setInterval(() => checkHealth(), 1800000);
+  setInterval(() => reconcileCorrections(), 43200000);
+  setInterval(() => flushTelemetry(), 900000);
+  setInterval(() => npsService.runCycle(), 43200000);
+  setInterval(() => uiService.revalidateBounds(), 5000);
 
-  // 6. Check for OTA Updates
   setTimeout(() => {
     autoUpdater.checkForUpdatesAndNotify();
   }, 10000);
 
-  // Stagger Intelligence Sweep even more
   setTimeout(() => {
     bulkIntelligenceService.runSweep();
-    setInterval(() => bulkIntelligenceService.runSweep(), 21600000); // 6h
-  }, staggerDelay + 300000); // 5 minutes after warm-up
+    setInterval(() => bulkIntelligenceService.runSweep(), 21600000);
+  }, staggerDelay + 300000);
 
   setTimeout(() => {
     npsService.runCycle();
-  }, staggerDelay + 600000); // 10 minutes after warm-up
+  }, staggerDelay + 600000);
 });
 
 app.on('before-quit', async () => {

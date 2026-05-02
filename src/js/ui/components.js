@@ -149,3 +149,25 @@ export function renderPurchaseRow(row) {
     create('span', { className: 'pr-value', text: `R$ ${row.vltotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` })
   ]);
 }
+
+/**
+ * Maintenance Banner for contingency plan (EAV-130)
+ * Displays at the top of the content area when system is degraded.
+ */
+export function MaintenanceBanner(message, options = {}) {
+  return create('div', { 
+    className: `maintenance-banner ${options.className || ''}`.trim(),
+    id: 'maintenance-banner'
+  }, [
+    create('span', { className: 'banner-icon', text: '⚠️' }),
+    create('span', { className: 'banner-text', text: message || 'Manutenção preventiva em andamento. Algumas informações podem estar desatualizadas.' }),
+    options.closable ? create('button', { 
+      className: 'banner-close', 
+      text: '✕',
+      onClick: (e) => {
+        const banner = e.target.closest('.maintenance-banner');
+        if (banner) banner.remove();
+      }
+    }) : null
+  ].filter(Boolean));
+}

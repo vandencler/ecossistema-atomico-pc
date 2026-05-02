@@ -12,6 +12,10 @@
     "tn": 2129,
     "fn": 28
   },
+  "affinity_evaluation": {
+    "simulated_hit_rate": 0.22,
+    "gender_alignment_pct": 100
+  },
   "ab_test_simulation": {
     "split": {
       "A": 7140,
@@ -19,5 +23,5 @@
     },
     "description": "Deterministic 50/50 split based on MD5 hash of idpessoa"
   },
-  "timestamp": "2026-05-02T03:34:38.249Z"
+  "timestamp": "2026-05-02T04:13:23.594Z"
 }

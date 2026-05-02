@@ -1,6 +1,6 @@
 
 const cwd = process.cwd();
-if (!cwd.toLowerCase().includes("-pc")) {
+if (!cwd.toLowerCase().includes('-pc')) {
     console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
     process.exit(1);
 }

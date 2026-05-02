@@ -482,3 +482,31 @@ body {
   color: #fff;
   border-color: var(--green);
 }
+
+/* ── Maintenance Banner (EAV-130) ── */
+.maintenance-banner {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-left: 4px solid var(--yellow);
+  padding: 10px 14px;
+  margin: 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.banner-icon { font-size: 16px; }
+.banner-text { font-size: 11px; font-weight: 500; color: var(--yellow); line-height: 1.4; flex: 1; }
+.banner-close {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: 14px; padding: 4px;
+  border-radius: 4px; transition: all 0.2s;
+}
+.banner-close:hover { color: var(--yellow); background: rgba(234, 179, 8, 0.1); }

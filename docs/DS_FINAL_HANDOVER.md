@@ -8,13 +8,14 @@ The scoring engine has been completely overhauled to support the 50-representati
 
 *   **Supervised Churn Model:** Transitioned from RFM heuristics to a weighted logistic-style model. Added features: Customer Tenure, Average Basket Size, Category Diversity, and Credit Status.
 *   **Segmented Recommendations:** Implemented Market Basket Analysis with Lift/Support metrics. Added demographic filtering (Gender-based) to ensure recommendation relevance.
-*   **Regional Strategy:** Identified high-potential "Lookalike" prospects in Sorocaba and generated targeted activation lists.
+*   **Regional Strategy:** Identified 9,831 high-potential "Lookalike" prospects in Sorocaba and generated targeted activation lists. Created `docs/SOROCABA_LOOKALAKE_STRATEGY.md` for CMO.
 
 ## 2. Robustness & Resilience
 *   **A/B Testing Framework:** Deterministic 50/50 split implemented in `IntelligenceService`. Performance is tracked via Telemetry for objective validation.
 *   **Behavioral Monitoring:** Implemented frustration detection based on telemetry (sidebar toggle frequency), providing data-driven evidence for UX bug EAV-134.
 *   **Offline Support:** All ML scores and sentiment labels are synchronized to the local SQLite cache.
 *   **Fix EAV-133:** Resolved critical `canJoinPrices` scoping error in `clientService.js`.
+*   **Performance Insight:** Identified that "Slow Queries" in the dashboard are driven by outlier clients (e.g., ID `01000018N3` with 52k+ items). For 99.9% of the base, index `idx_docitem_idpessoa` ensures sub-100ms response times.
 
 ## 3. Latest Metrics
 | Metric | Score | Impact |

@@ -18,6 +18,7 @@ Para garantir que o sistema está conversando com a base de dados oficial:
 
 ### 3. Entendendo a Nova Interface (v1.1.2)
 O EAV usa inteligência visual para facilitar seu trabalho. Procure por:
+- **Barra Lateral "Escondida":** Se o menu sumir, clique no logo flutuante do EAV para trazê-lo de volta.
 - **MetricCards:** Os blocos coloridos no topo (Total Comprado, Frequência) que dão o resumo do cliente.
 - 👑 **VIP (Curva A):** Seus clientes mais importantes. Atendimento prioritário!
 - 📉 **Risco de Abandono:** Clientes que pararam de comprar. Ligue para eles AGORA!

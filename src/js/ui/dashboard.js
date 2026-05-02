@@ -1,6 +1,6 @@
 import { $, setChildren, stateMessage } from '../utils.js';
 import { api } from '../api.js';
-import { MetricCard } from './components.js';
+import { MetricCard, MaintenanceBanner } from './components.js';
 
 /**
  * CTO Dashboard UI (Phase 6)
@@ -9,33 +9,40 @@ import { MetricCard } from './components.js';
 
 export async function loadDashboardModule() {
   const container = $('dashboard-metrics');
+
   setChildren(container, [stateMessage('Carregando metricas estrategicas...', 'info')]);
 
   try {
     const metrics = await api.getExecutiveMetrics();
     if (metrics.error) throw new Error(metrics.error);
 
-    setChildren(container, [
-      MetricCard('Ações SAV Pendentes', metrics.sav.pending, { 
+    const dashboardItems = [
+      MetricCard('Ações SAV Pendentes', metrics.sav.pending, {
         type: metrics.sav.pending > 10 ? 'warn' : 'success',
         subValue: `Total histórico: ${metrics.sav.total}`
       }),
-      MetricCard('Interações WhatsApp (24h)', metrics.whatsapp.recent, { 
-        type: 'info' 
+      MetricCard('Interações WhatsApp (24h)', metrics.whatsapp.recent, {
+        type: 'info'
       }),
-      MetricCard('Clientes em Risco (ML)', metrics.intelligence.high_risk, { 
+      MetricCard('Clientes em Risco (ML)', metrics.intelligence.high_risk, {
         type: metrics.intelligence.high_risk > 50 ? 'error' : 'info',
         subValue: 'Score > 70'
       }),
-      MetricCard('Oportunidade Sorocaba', metrics.intelligence.lookalikes, { 
+      MetricCard('Oportunidade Sorocaba', metrics.intelligence.lookalikes, {
         type: 'success',
         subValue: 'Perfil Lookalike'
       }),
-      MetricCard('Status do Sistema', metrics.system.status, { 
+      MetricCard('Status do Sistema', metrics.system.status, {
         type: 'success',
         subValue: `Versão: ${metrics.system.version}`
       })
-    ]);
+    ];
+
+    setChildren(container, dashboardItems);
+
+    if (metrics.system?.maintenance) {
+      container.prepend(MaintenanceBanner());
+    }
 
     setupExportButtons();
   } catch (e) {

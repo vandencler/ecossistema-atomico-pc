@@ -13,6 +13,7 @@ Como Multiplicador da Fase 6, você é o braço direito da equipe de Marketing e
 
 ### 2. Destaques da Versão 1.1.2 (Interface Padronizada)
 O sistema ficou mais moderno e fácil de ler. Explique para a equipe:
+- **Barra Lateral Inteligente:** Se a barra lateral sumir, basta clicar no ícone flutuante do EAV.
 - **MetricCards:** Os blocos coloridos no topo que mostram o "resumo" do cliente (Total Comprado, Última Visita).
 - **StatusBadges:** Etiquetas claras para saber se o cliente é Curva A, B ou C.
 - **ActionGroup:** Todos os botões de ação (Ligar, Editar, Exportar) agora estão agrupados no mesmo lugar.

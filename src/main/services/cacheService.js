@@ -122,11 +122,12 @@ async function warmUpCache() {
     // Proactive docitem caching for top clients
     const clientIds = topClients.rows.map(r => r.idpessoa);
     await warmUpTopProductsCache(clientIds);
+    await warmUpLastPurchasesCache(clientIds);
 
     // Sync ML Scores too
     await syncMLScoresToCache();
 
-    await logEvent('CACHE_WARMUP', '0', `Cache local populado com ${topClients.rowCount} clientes + ML scores.`);
+    await logEvent('CACHE_WARMUP', '0', `Cache local populado com ${topClients.rowCount} clientes + ML scores + Histórico.`);
     console.log(`[CACHE] Warm-up concluído: ${topClients.rowCount} clientes cacheados.`);
   } catch (e) {
     console.error('[CACHE] Erro no warm-up:', e.message);
@@ -217,6 +218,55 @@ async function warmUpTopProductsCache(clientIds) {
     }
   } catch (e) {
     console.warn('[CACHE] Falha no warm-up de Top Produtos:', e.message);
+  }
+}
+
+async function warmUpLastPurchasesCache(clientIds) {
+  console.log(`[CACHE] Iniciando warm-up de Histórico de Compras for ${clientIds.length} clientes...`);
+  try {
+    const db = getLocalDb();
+    
+    const batchSize = 100;
+    for (let i = 0; i < clientIds.length; i += batchSize) {
+      const batchIds = clientIds.slice(i, i + batchSize);
+      
+      const res = await pool.query(`
+        SELECT idpessoa, iddocumento, nrdocumento, vltotal, aldesconto, vldesconto, 
+               usuario, dsobservacao, dtemissao
+        FROM (
+          SELECT *, ROW_NUMBER() OVER (PARTITION BY idpessoa ORDER BY dtemissao DESC) as rn
+          FROM wshop.documen
+          WHERE idpessoa = ANY($1::varchar[]) AND tpoperacao = 'V'
+            AND (stdocumentocancelado IS NULL OR stdocumentocancelado != 'S')
+        ) t WHERE rn <= 10
+      `, [batchIds]);
+
+      const insert = db.prepare(`
+        INSERT OR REPLACE INTO last_purchases_cache (
+          idpessoa, iddocumento, nrdocumento, vltotal, aldesconto, vldesconto,
+          usuario, dsobservacao, dtemissao, nrnotafiscal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      db.transaction(() => {
+        for (const row of res.rows) {
+          insert.run(
+            row.idpessoa,
+            row.iddocumento,
+            row.nrdocumento,
+            row.vltotal,
+            row.aldesconto,
+            row.vldesconto,
+            row.usuario,
+            row.dsobservacao,
+            row.dtemissao ? new Date(row.dtemissao).toISOString() : null,
+            row.nrdocumento // Use nrdocumento as fallback for nrnotafiscal
+          );
+        }
+      })();
+    }
+  } catch (e) {
+    console.warn('[CACHE] Falha no warm-up de Histórico de Compras:', e.message);
   }
 }
 
