@@ -141,13 +141,17 @@ async function getClientRanking(idpessoa) {
   }
 }
 
-async function applyTableNameOverlay(profile, fixes) {
-  if (!fixes.idtabela) return;
-  const table = await pool.query(
-    'SELECT dstabela FROM wshop.tabelaprecos WHERE idtabela = CAST($1 AS text) LIMIT 1',
-    [fixes.idtabela]
-  );
-  if (table.rows[0]?.dstabela) profile.tabela_preco = table.rows[0].dstabela;
+async function applyTableNameOverlay(profile, fixes, canJoinPrices) {
+  if (!fixes.idtabela || canJoinPrices === false) return;
+  try {
+    const table = await pool.query(
+      'SELECT dstabela FROM wshop.tabelaprecos WHERE idtabela = CAST($1 AS text) LIMIT 1',
+      [fixes.idtabela]
+    );
+    if (table.rows[0]?.dstabela) profile.tabela_preco = table.rows[0].dstabela;
+  } catch (e) {
+    console.warn('[CLIENT] Falha ao sobrepor nome da tabela:', e.message);
+  }
 }
 
 async function searchClient(query) {
@@ -421,7 +425,7 @@ async function getClientDashboard(rawIdPessoa) {
 
     const health = await getLastHealth();
     const can = health.databases.mirror?.accessibleTables || {};
-    const canJoinPrices = can.tabelaprecos !== false;
+    const canJoinPrices = can.tabelaprecos === true;
 
     const runQuery = async (p, sql, params, fallback = []) => {
       try {
@@ -591,7 +595,7 @@ async function getClientDashboard(rawIdPessoa) {
     Object.keys(FIELD_CONFIG).forEach((field) => {
       if (fixes[field] !== undefined) p[field] = fixes[field];
     });
-    await applyTableNameOverlay(p, fixes);
+    await applyTableNameOverlay(p, fixes, canJoinPrices);
 
     const s = stats || {};
     const priorityData = {

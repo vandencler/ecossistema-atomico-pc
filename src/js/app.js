@@ -21,12 +21,12 @@ let isDragging = false;
 let dragStartY = 0;
 let dragMoved = false;
 
-function setSidebarState(expanded) {
+function setSidebarState(expanded, source = 'unknown') {
   const tab = $('collapsed-tab');
   const sidebar = $('sidebar');
   
   if (!tab || !sidebar) {
-    console.error('[UI] Elementos da sidebar nao encontrados no DOM!');
+    console.error(`[UI] [${source}] Elementos da sidebar nao encontrados no DOM!`);
     return;
   }
 
@@ -34,7 +34,7 @@ function setSidebarState(expanded) {
   tab.hidden = isExpanded;
   sidebar.hidden = !isExpanded;
   
-  console.log('[UI] Sidebar state set:', isExpanded ? 'EXPANDED' : 'COLLAPSED');
+  console.log(`[UI] [${source}] Sidebar state set:`, isExpanded ? 'EXPANDED' : 'COLLAPSED');
   
   if (isExpanded) {
     const input = $('search-input');
@@ -43,30 +43,48 @@ function setSidebarState(expanded) {
 }
 
 function setupSidebar() {
-  api.onSidebarToggled(setSidebarState);
+  api.onSidebarToggled((expanded) => setSidebarState(expanded, 'IPC_EVENT'));
 
   const tab = $('collapsed-tab');
   tab.addEventListener('mousedown', (event) => {
     isDragging = true;
     dragStartY = event.screenY;
     dragMoved = false;
+    tab.classList.add('dragging');
     event.preventDefault();
   });
 
   document.addEventListener('mousemove', (event) => {
     if (!isDragging) return;
     const deltaY = event.screenY - dragStartY;
-    if (Math.abs(deltaY) > 3) {
+    if (Math.abs(deltaY) > 10) {
       dragMoved = true;
       dragStartY = event.screenY;
       api.moveTag(deltaY);
     }
   });
 
-  window.addEventListener('mouseup', () => {
-    if (isDragging && !dragMoved) api.toggleSidebar();
+  const stopDragging = () => {
+    if (isDragging) {
+      if (!dragMoved) {
+        api.toggleSidebar();
+      } else {
+        api.saveTagPosition();
+      }
+    }
     isDragging = false;
     dragMoved = false;
+    tab.classList.remove('dragging');
+  };
+
+  window.addEventListener('mouseup', stopDragging);
+  window.addEventListener('blur', () => {
+    isDragging = false;
+    dragMoved = false;
+    tab.classList.remove('dragging');
+  });
+  document.addEventListener('mouseleave', () => {
+    if (isDragging) stopDragging();
   });
 
   $('btn-collapse')?.addEventListener('click', () => api.toggleSidebar());
@@ -84,19 +102,35 @@ function setupNotifications() {
 }
 
 (async function init() {
-  setupSidebar();
-  setupNotifications();
+  try {
+
+  console.log('[UI] Initializing...');
+  setupSidebar(); console.log('[UI] Sidebar setup done');
+  setupNotifications(); console.log('[UI] Notifications setup done');
   setupNavigation({ 
     onOpenClient: openClient, 
     onOpenWhatsApp: openWhatsApp 
   });
-  setupSearch(openClient);
+  setupSearch(openClient); console.log('[UI] Search setup done');
   setupCorrections();
-  setupFeedback();
+  setupFeedback(); console.log('[UI] Feedback setup done');
   
   const expanded = await api.getSidebarState();
-  setSidebarState(expanded);
+  setSidebarState(expanded, 'INIT');
 
   updateNavAlerts();
   setInterval(updateNavAlerts, 60000);
+
+  } catch (e) {
+    console.error('[UI] Init failed:', e);
+    // Fallback: Try to show collapsed sidebar at least
+    try { setSidebarState(false, 'FATAL_FALLBACK'); } catch(e2) {}
+  }
 })();
+
+document.addEventListener('visibilitychange', () => {
+  console.log('[UI] Visibility changed:', document.visibilityState);
+  if (document.visibilityState === 'visible') {
+    api.getSidebarState().then(expanded => setSidebarState(expanded, 'VISIBILITY_CHANGE'));
+  }
+});

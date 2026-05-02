@@ -72,6 +72,13 @@ The **Ecossistema Atômico** is a high-performance, resilient desktop platform d
 6. **Telemetry:** Resilient tracking of user interactions and system performance.
 7. **UI Component Library:** Standardized design system and interactive Toast alerts.
 8. **Report Export:** PDF/Excel/TXT export for product and client analytics.
+9. **Pilot Support (Phase 6):** Controlled 10-user power user pilot with real-time sentiment monitoring and operational gate verification.
+
+## Phase 6 Operational Standards
+- **Onboarding:** All Power Users must receive the official Welcome Pack and Quick Guide.
+- **Sentiment Monitoring:** CMO must audit `v_sentimento_feedback` weekly.
+- **SAV Gate:** All batch exports must be verified by a manager before ERP execution.
+- **Infrastructure:** expansion beyond 10 users REQUIRES `max_connections >= 250` and full `docitem` permission sign-off.
 
 ## Vault Documentation
 The shared knowledge vault is at `D:\obsidian\memoria-infinita\memoria-infinita\`

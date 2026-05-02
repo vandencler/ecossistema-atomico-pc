@@ -4,6 +4,7 @@ const baseApi = {
   toggleSidebar: () => window.atomico.toggleSidebar(),
   getSidebarState: () => window.atomico.getSidebarState(),
   moveTag: (deltaY) => window.atomico.moveTag(deltaY),
+  saveTagPosition: () => window.atomico.saveTagPosition(),
   onSidebarToggled: (cb) => window.atomico.onSidebarToggled(cb),
   getNavigationAlerts: () => window.atomico.getNavigationAlerts(),
   searchClient: (query) => window.atomico.searchClient(query),
@@ -38,7 +39,8 @@ const baseApi = {
   bulkExportByPriority: (priorityBucket, format) => window.atomico.bulkExportByPriority(priorityBucket, format),
   onNotificationReceived: (cb) => window.atomico.onNotificationReceived(cb),    
   onNavigateTo: (cb) => window.atomico.onNavigateTo(cb),
-  submitFeedback: (data) => window.atomico.submitFeedback(data)
+  submitFeedback: (data) => window.atomico.submitFeedback(data),
+  trackEvent: (name, payload, userId) => window.atomico.trackEvent({ name, payload, userId })
 };
 
 export const api = new Proxy(baseApi, {

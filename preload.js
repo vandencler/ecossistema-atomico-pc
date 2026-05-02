@@ -39,5 +39,6 @@ contextBridge.exposeInMainWorld('atomico', {
   bulkExportByPriority: (priorityBucket, format) => ipcRenderer.invoke('bulk-export-priority', priorityBucket, format),
   onNotificationReceived: (cb) => ipcRenderer.on('notification-received', (_, data) => cb(data)),
   onNavigateTo: (cb) => ipcRenderer.on('navigate-to', (_, section) => cb(section)),
-  submitFeedback: (data) => ipcRenderer.invoke('submit-feedback', data)
+  submitFeedback: (data) => ipcRenderer.invoke('submit-feedback', data),
+  trackEvent: (data) => ipcRenderer.invoke('track-event', data)
 });

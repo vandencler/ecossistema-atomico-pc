@@ -105,19 +105,24 @@ function createWindow() {
   uiService.setWindow(mainWindow);
   mainWindow.setVisibleOnAllWorkspaces(true);
   mainWindow.setOpacity(1.0);
-  mainWindow.loadFile(path.join(__dirname, 'src', 'index.html')).finally(() => uiService.showExpanded());
-  mainWindow.once('ready-to-show', () => uiService.showExpanded());
-  mainWindow.webContents.once('did-finish-load', () => uiService.showExpanded());
-  setTimeout(() => uiService.showExpanded(), 1000);
-  setTimeout(() => uiService.showExpanded(), 2500);
+  mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
+
+  mainWindow.once('ready-to-show', () => {
+    if (uiService.getState()) {
+      uiService.showExpanded();
+    } else {
+      uiService.showCollapsed();
+    }
+  });
 
   mainWindow.on('blur', () => {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    // Opacity change disabled for stability
+    console.log('[MAIN] Window blurred, forcing AlwaysOnTop');
   });
 
   mainWindow.on('focus', () => {
     if (!uiService.getState()) mainWindow.setOpacity(1.0);
+    console.log('[MAIN] Window focused');
   });
 
   screen.on('display-metrics-changed', () => uiService.handleDisplayMetricsChanged());
@@ -159,6 +164,7 @@ const searchValidator = (q) => {
 ipcMain.handle('toggle-sidebar', () => uiService.toggleSidebar());
 ipcMain.handle('get-sidebar-state', () => uiService.getState());
 ipcMain.handle('move-tag', (event, deltaY) => uiService.moveTag(deltaY));
+ipcMain.handle('save-tag-position', () => uiService.saveTagPosition());
 ipcMain.handle('get-navigation-alerts', () => uiService.getNavigationAlerts());
 
 // Client Domain
@@ -243,6 +249,7 @@ ipcMain.handle('set-app-identity', safeInvoke(async (e, id) => {
 }, idValidator));
 
 ipcMain.handle('submit-feedback', safeInvoke((e, data) => recordFeedback(data.satisfaction, data.comment, data.deviceInfo)));
+ipcMain.handle('track-event', safeInvoke((e, data) => trackEvent(data.name, data.userId || 'auto', data.payload)));
 
 // Help Domain
 ipcMain.handle('get-help-content', safeInvoke(async (event, fileName) => {
@@ -264,6 +271,14 @@ ipcMain.handle('get-executive-metrics', async () => {
     const savRes = await ecoPool.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'PENDENTE') as pending FROM acoes_pendentes");
     const waRes = await ecoPool.query("SELECT COUNT(*) as total FROM omnichannel_mensagens WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'");
     const clientRes = await ecoPool.query('SELECT COUNT(*) as total FROM ml_churn_risk WHERE risk_score > 70');
+    
+    // Lookalike Opportunities (Sorocaba region with high priority)
+    const lookalikeRes = await ecoPool.query(`
+      SELECT COUNT(*) as total 
+      FROM ml_client_profiles 
+      WHERE cidade = 'Sorocaba' AND stcredbloqueado = false
+    `);
+
     const npsSummary = await npsService.getSummary();
     
     return {
@@ -275,7 +290,8 @@ ipcMain.handle('get-executive-metrics', async () => {
         recent: parseInt(waRes.rows[0].total)
       },
       intelligence: {
-        high_risk: parseInt(clientRes.rows[0].total)
+        high_risk: parseInt(clientRes.rows[0].total),
+        lookalikes: parseInt(lookalikeRes.rows[0].total)
       },
       nps: npsSummary,
       system: {
@@ -369,6 +385,7 @@ app.whenReady().then(async () => {
   initLocalDb(app.getPath('userData'));
 
   // 3. UI
+  await uiService.initializeState();
   createWindow();
 
   // 4. Background Services
@@ -396,7 +413,7 @@ app.whenReady().then(async () => {
   setInterval(() => flushTelemetry(), 900000); // 15m
   setInterval(() => bulkIntelligenceService.runSweep(), 21600000); // 6h
   setInterval(() => npsService.runCycle(), 43200000); // 12h
-  setInterval(() => uiService.revalidateBounds(), 60000); // 1m check
+  setInterval(() => uiService.revalidateBounds(), 5000); // 1m check
 
   // 6. Check for OTA Updates and run initial sweep
   setTimeout(() => {

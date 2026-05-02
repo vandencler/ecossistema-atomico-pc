@@ -27,6 +27,10 @@ export async function loadDashboardModule() {
         type: metrics.intelligence.high_risk > 50 ? 'error' : 'info',
         subValue: 'Score > 70'
       }),
+      MetricCard('Oportunidade Sorocaba', metrics.intelligence.lookalikes, { 
+        type: 'success',
+        subValue: 'Perfil Lookalike'
+      }),
       MetricCard('Status do Sistema', metrics.system.status, { 
         type: 'success',
         subValue: `Versão: ${metrics.system.version}`

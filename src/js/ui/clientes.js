@@ -146,16 +146,34 @@ export async function loadRecommendations(id) {
   setChildren(target, rows.map((row) => {
     let reasonText = `${textValue(row.nmgrupo, 'Sem grupo')}`;
     if (row.source === 'ML') {
-      const mlLabel = row.reason === 'HIGH_HISTORICAL_VOLUME' ? 'Alta recorrência histórica' : 'Afinidade preditiva';
+      let mlLabel = 'Afinidade preditiva';
+      if (row.reason === 'HIGH_HISTORICAL_VOLUME') mlLabel = 'Alta recorrência histórica';
+      else if (row.reason?.includes('LOOKALAKE_POPULAR_FEMININO')) mlLabel = 'Sucesso entre público Feminino';
+      else if (row.reason?.includes('LOOKALAKE_POPULAR_MASCULINO')) mlLabel = 'Sucesso entre público Masculino';
+      else if (row.reason?.includes('LOOKALAKE_POPULAR_CORPORATE')) mlLabel = 'Favorito Corporate';
+      else if (row.reason?.includes('LOOKALAKE_POPULAR_IN_REGION')) mlLabel = 'Sucesso na Região';
+      
       reasonText += ` - ${mlLabel} ✨`;
     } else {
       reasonText += ` - ${row.clientes_similares || 0} clientes similares compraram`;
     }
 
-    return create('div', { className: `rec-row rec-source-${(row.source || 'heuristic').toLowerCase()}` }, [
+    const recDiv = create('div', { 
+      className: `rec-row rec-source-${(row.source || 'heuristic').toLowerCase()}`,
+      onClick: () => {
+        api.trackEvent('recommendation_clicked', {
+          idpessoa: id,
+          idproduto: row.idproduto,
+          source: row.source,
+          reason: row.reason
+        });
+      }
+    }, [
       create('div', { className: 'rec-name', text: textValue(row.nmproduto) }),
       create('div', { className: 'rec-reason', text: reasonText })
     ]);
+
+    return recDiv;
   }));
 }
 

@@ -41,12 +41,13 @@ body {
   height: 36px;
   display: flex; align-items: center; justify-content: center;
   cursor: grab; background: #ffffff; border: 1px solid var(--accent); z-index: 9999; border-radius: 10px 0 0 10px;
-  transition: all 0.15s; box-shadow: -1px 1px 5px rgba(0,0,0,0.2);
+  transition: all 0.15s, top 0s, left 0s; box-shadow: -2px 2px 8px rgba(0,0,0,0.4);
   overflow: hidden;
 }
-.collapsed-tab:hover { box-shadow: -2px 1px 10px rgba(0,0,0,0.35); transform: scale(1.05); }
-.collapsed-tab:active { cursor: grabbing; }
-.tab-logo { width: 26px; height: 26px; object-fit: contain; pointer-events: none; }
+.collapsed-tab:hover { box-shadow: -4px 4px 12px rgba(0,0,0,0.5); transform: scale(1.1); }
+.collapsed-tab:active, .collapsed-tab.dragging { cursor: grabbing; background: var(--accent); border-color: #fff; box-shadow: -6px 6px 16px rgba(0,0,0,0.6); }
+.collapsed-tab.dragging .tab-logo { filter: brightness(0) invert(1); }
+.tab-logo { width: 26px; height: 26px; object-fit: contain; pointer-events: none; transition: filter 0.1s; }
 
 /* ── Sidebar ── */
 .sidebar {
@@ -55,6 +56,12 @@ body {
     radial-gradient(ellipse at 20% 0%, rgba(59,130,246,0.06) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 100%, rgba(139,92,246,0.04) 0%, transparent 60%);
   border-left: 1px solid var(--accent); overflow: hidden; z-index: 9998; box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+  animation: slideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0.5; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* ── Header ── */

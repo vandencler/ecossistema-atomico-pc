@@ -77,10 +77,11 @@ async function monitor() {
     }
     console.log(`- Tabelas bloqueadas:  ${permissionCount}/${eav94Tables.length} ${permissionCount > 0 ? '🔴' : '🟢'}`);
 
-    const docItemIdx = await pool.query(`
+    const docItemIdxRaw = await pool.query(`
       SELECT indexname FROM pg_indexes 
       WHERE schemaname = 'wshop' AND tablename = 'docitem' AND indexname = 'idx_docitem_idpessoa'
-    `).then(r => r.rowCount > 0).catch(() => false);
+    `).catch(e => { console.log('DEBUG: Index check error:', e.message); return { rowCount: 0 }; });
+    const docItemIdx = docItemIdxRaw.rowCount > 0;
     console.log(`- Index docitem_idp:   ${docItemIdx ? '🟢 OK' : '🔴 MISSING (Slow Dashboard)'}`);
 
     // 5. Sentiment Pulse (Phase 6)

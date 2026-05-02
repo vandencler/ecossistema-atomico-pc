@@ -39,4 +39,11 @@ Você pode buscar clientes e anotar correções normalmente. Assim que o sinal v
 "Recebeu uma mensagem no WhatsApp perguntando sua nota para o EAV? Responda com sinceridade! 0 a 10. Queremos ouvir vocês para deixar o sistema cada vez mais a cara do nosso dia a dia."
 
 ---
+
+## 📅 Quinta-feira (Expansão)
+
+### 10:00 - Pílula #6: Lookalikes - Ouro Escondido em Sorocaba! 🎯
+"Se você atua na região de Sorocaba, preste atenção nos clientes 'Curva C' com score de prioridade alto. Eles têm o perfil dos nossos melhores compradores! Use a aba 'Sugestões' para ver o que oferecer para eles crescerem rápido. 🚀"
+
+---
 *Instruções para o Multiplicador: Copie e cole estas mensagens no grupo de vendas da sua unidade nos horários sugeridos.*

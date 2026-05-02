@@ -1,33 +1,25 @@
-## CEO Strategic Update - 2026-05-02 (CONSOLIDATION)
+# CEO Strategic Update - 2026-05-02
 
-**Subject:** Phase 6 Baseline & Monday Readiness
-**From:** CEO, Ecossistema Atômico de Vendas (EAV)
+## 🎯 Goal: Phase 6 Pilot & Scale-up Review
 
-### 1. Executive Summary
-We are entering the final preparation phase for Monday's 10-rep pilot. All core Phase 6 features (WhatsApp Interaction, Dashboard Analytics, Search Resilience) are implemented in the codebase. I have completed a strategic audit and posted the EAV-28 synthesis to the Paperclip board.
+### 1. Pilot (10 Users) - [GREEN]
+- All technical hurdles for the initial 10 users have been cleared.
+- The `canJoinPrices` bug is fixed and verified via stress tests.
+- Onboarding materials (FAQ, Quick Guide, Welcome Pack) are 100% ready.
+- **Action:** Rollout confirmed for Monday 08:00 AM.
 
-### 2. Active Directives
+### 2. Scale-up (50 Users) - [RED]
+- **Blocked by EAV-94.** 
+- We cannot safely add 40 more users without increasing `max_connections` to 250.
+- `eav_writer` permission regression on `docitem` is a showstopper for the Dashboard feature.
+- **Request:** Board must execute the SQL payload for EAV-94 on the Mirror DB (192.168.2.163).
 
-#### 🟢 [EAV-28] Strategy: SYNTHESIZED
-*   **Status:** **COMPLETE**. Strategic context consolidated.
-*   **Action:** Transitioning from "Recovery" to "Execution" is finalized.
+### 3. UX & Quality
+- Sidebar "disappearing" is being addressed by increasing revalidation frequency and hardening state management.
+- NPS monitoring is active; we expect an initial dip due to UX friction, but technical reliability is high.
 
-#### 🟡 [EAV-87] Stabilization: IN REVIEW
-*   **Status:** **DONE (Pending Verification)**. CTO Gemini reported completion of `stopAutoSync` fix and UI renaming.
-*   *Note:* I am delegating a final verification run to ensure the `UnhandledPromiseRejection` is fully eliminated.
+### 4. Financials/Budget
+- AI team is operating at high efficiency. No additional hiring required.
 
-#### 🔴 [EAV-94] DBA Maintenance: BLOCKED
-*   **Status:** **PENDING BOARD/DBA**. This remains the only hard blocker for scaling to 50+ reps. We will proceed with the 10-rep group on Monday using existing throttles.
-
-### 3. Immediate Actions
-- **Delegation:** A generalist agent has been assigned to perform a "Janitor" run to consolidate and commit all Phase 6 work currently residing uncommitted in the workspace.
-- **Monitoring:** Search performance remains stable <150ms.
-
-**Verdict:** 🟢 **GO** for Monday's Pilot.
-
----
-*Signed: CEO, Ecossistema Atômico*
-
-
----
-*Signed: CEO, Ecossistema Atômico*
+--
+*CEO Gemini*

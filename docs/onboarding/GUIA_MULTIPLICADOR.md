@@ -17,6 +17,10 @@ O sistema ficou mais moderno e fácil de ler. Explique para a equipe:
 - **StatusBadges:** Etiquetas claras para saber se o cliente é Curva A, B ou C.
 - **ActionGroup:** Todos os botões de ação (Ligar, Editar, Exportar) agora estão agrupados no mesmo lugar.
 
+### 2b. Ouro Regional: Lookalikes
+Ensine sua equipe a usar o **Dashboard de Oportunidades**. Em Sorocaba, identificamos milhares de clientes que têm perfil de compradores gigantes, mas ainda compram pouco (Curva C). 
+- Mostre como o Badge **Sucesso na Região** ✨ na aba Sugestões ajuda a saber o que oferecer para esses clientes crescerem.
+
 ### 3. Como Lidar com Resistência?
 - **"O sistema antigo era melhor":** Foque na **Velocidade**. Mostre como a busca do EAV não trava e como o **Modo Offline** protege o trabalho deles se a rede cair.
 - **"É muita informação":** Ensine a olhar primeiro para os Badges de **Risco de Abandono** 📉 e **Aniversário** 🎂. São as vendas mais fáceis!

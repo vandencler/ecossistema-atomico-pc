@@ -1,5 +1,14 @@
 [
   {
+    "id": "EAV-134",
+    "title": "UX Bug: Sidebar disappears intermittently",
+    "assignee": "Engineering",
+    "status": "completed",
+    "priority": "high",
+    "description": "Resolved intermittent sidebar disappearance by hardening window revalidation (visibility/minimized checks) and adding state telemetry in app.js.",
+    "notes": "v1.1.3 rollout addresses the reported stability issues."
+  },
+  {
     "id": "EAV-101",
     "title": "DBA Action: Apply Missing Trigram Indexes",
     "assignee": "DBA Team",

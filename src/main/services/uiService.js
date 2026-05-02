@@ -1,4 +1,4 @@
-const { screen, shell } = require('electron');
+﻿const { screen, shell } = require('electron');
 const { readNumber } = require('../utils');
 
 class UIService {
@@ -9,10 +9,23 @@ class UIService {
     this.COLLAPSED_HEIGHT = 36;
     this.mainWindow = null;
     this.tagY = -1;
+    this.initialized = false;
   }
 
   setWindow(window) {
     this.mainWindow = window;
+  }
+
+  async initializeState() {
+    if (this.initialized) return;
+    const { getConfigValue } = require('./configService');
+    const expanded = await getConfigValue('ui_sidebar_expanded', 'true');
+    const savedTagY = await getConfigValue('ui_sidebar_tag_y', '-1');
+    
+    this.isExpanded = expanded === 'true';
+    this.tagY = parseInt(savedTagY, 10);
+    this.initialized = true;
+    console.log(`[UI] State initialized: expanded=${this.isExpanded}, tagY=${this.tagY}`);
   }
 
   getScreenEdge() {
@@ -21,10 +34,13 @@ class UIService {
     return { x: wa.x, y: wa.y, w: wa.width, h: wa.height };
   }
 
-  toggleSidebar() {
+  async toggleSidebar() {
     const { logEvent } = require('./logService');
+    const { setSystemConfig } = require('./configService');
     if (!this.mainWindow) return false;
+    
     this.isExpanded = !this.isExpanded;
+    await setSystemConfig('ui_sidebar_expanded', String(this.isExpanded));
 
     if (this.isExpanded) {
       this.showExpanded();
@@ -62,21 +78,29 @@ class UIService {
     this.mainWindow.setBounds({ x: x + w - this.COLLAPSED_WIDTH, y: tagY, width: this.COLLAPSED_WIDTH, height: this.COLLAPSED_HEIGHT });
     this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     this.mainWindow.show();
+    this.mainWindow.restore(); // Ensure it is not minimized
     this.mainWindow.moveTop();
     this.mainWindow.webContents.send('sidebar-toggled', false);
+    console.log(`[UI] Sidebar collapsed at y=${tagY}`);
     return true;
   }
 
-  
   revalidateBounds() {
     if (!this.mainWindow) return;
     const bounds = this.mainWindow.getBounds();
     const s = this.getScreenEdge();
     
-    // If window is completely off-screen, reset it
-    if (bounds.x < s.x - 100 || bounds.x > s.x + s.w + 100) {
-      console.warn('[UI] Window out of bounds detected, resetting...');
+    // If window is completely off-screen, or hidden, or not on top, reset it
+    const isOffScreen = bounds.x < s.x - 100 || bounds.x > s.x + s.w + 100;
+    const isMinimized = this.mainWindow.isMinimized();
+    const isVisible = this.mainWindow.isVisible();
+    
+    if (isOffScreen || isMinimized || !isVisible || !this.mainWindow.isAlwaysOnTop()) {
+      console.warn(`[UI] Window anomaly detected (OffScreen=${isOffScreen}, Minimized=${isMinimized}, Visible=${isVisible}), resetting...`);
       this.isExpanded ? this.showExpanded() : this.showCollapsed();
+    } else {
+      // Force always on top again just in case
+      this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     }
   }
 
@@ -93,6 +117,13 @@ class UIService {
     newY = Math.max(waY, Math.min(newY, waY + waH - this.COLLAPSED_HEIGHT));
     this.tagY = newY;
     this.mainWindow.setBounds({ x: bounds.x, y: newY, width: bounds.width, height: bounds.height });
+  }
+
+  async saveTagPosition() {
+    const { setSystemConfig } = require('./configService');
+    if (this.tagY !== -1) {
+      await setSystemConfig('ui_sidebar_tag_y', String(this.tagY));
+    }
   }
 
   async openWhatsApp(payload) {
@@ -142,7 +173,7 @@ class UIService {
         }
       };
     } catch (e) {
-      console.error('Falha ao obter alertas de navegação:', e.message);
+      console.error('Falha ao obter alertas de navegaÃ§Ã£o:', e.message);
       return { sav: { count: 0, urgent: 0 } };
     }
   }
