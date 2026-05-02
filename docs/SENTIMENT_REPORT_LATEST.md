@@ -7,15 +7,15 @@ O Net Promoter Score (NPS) Ã© coletado automaticamente via WhatsApp 48h apÃ³
 
 *   **NPS Atual:** 100
 *   **MÃ©dia das Notas:** 9.0 / 10
-*   **Total de Pesquisas Enviadas:** 7
+*   **Total de Pesquisas Enviadas:** 8
 *   ðŸ˜Š **Promotores (9-10):** 3
 *   ðŸ˜¡ **Detratores (0-6):** 0
 
 ## 2. AnÃ¡lise de Sentimento (Textual/ML)
 AnÃ¡lise de linguagem natural sobre mensagens recebidas via WhatsApp.
 
-*   **eNPS (Internal Sentiment):** 0.0 
-*   **Sentimento MÃ©dio:** -0.18 (-1 a +1)
+*   **eNPS (Internal Sentiment):** -28.6 
+*   **Sentimento MÃ©dio:** -0.29 (-1 a +1)
 *   **InteraÃ§Ãµes Analisadas:** 7
 
 ## 3. Feedback Manual (In-App)
