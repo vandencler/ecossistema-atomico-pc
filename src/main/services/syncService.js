@@ -28,8 +28,8 @@ function normalizeSyncItems(items) {
     .filter((id) => Number.isInteger(id) && id > 0);
 }
 
-async function withEcoTransaction(fn) {
-  const client = await ecoPool.connect();
+
+async function runInClientTransaction(client, fn) {
   try {
     await client.query('BEGIN');
     const result = await fn(client);
@@ -39,9 +39,19 @@ async function withEcoTransaction(fn) {
     try {
       await client.query('ROLLBACK');
     } catch (rollbackError) {
-      console.error('Falha ao reverter transacao SAV:', rollbackError.message);
+      console.error('[SYNC] Falha ao reverter transacao SAV:', rollbackError.message);
     }
     throw error;
+  }
+}
+
+async function withEcoTransaction(fn, existingClient = null) {
+  if (existingClient) {
+    return runInClientTransaction(existingClient, fn);
+  }
+  const client = await ecoPool.connect();
+  try {
+    return await runInClientTransaction(client, fn);
   } finally {
     client.release();
   }
@@ -56,21 +66,27 @@ async function reconcileLocalCorrections() {
   console.log(`[SYNC] Reconciliando ${buffered.length} correções locais...`);
   const { saveCorrection } = require('./correctionService');
 
-  for (const item of buffered) {
-    try {
-      const result = await saveCorrection({
-        idpessoa: item.idpessoa,
-        changes: [{ campo: item.campo, valorNovo: item.valor_novo }],
-        origem: 'OFFLINE_RECONCILE',
-        criadoPor: 'sistema'
-      });
+  let ecoClient;
+  try {
+    ecoClient = await ecoPool.connect();
+    for (const item of buffered) {
+      try {
+        const result = await saveCorrection({
+          idpessoa: item.idpessoa,
+          changes: [{ campo: item.campo, valorNovo: item.valor_novo }],
+          origem: 'OFFLINE_RECONCILE',
+          criadoPor: 'sistema'
+        }, ecoClient);
 
-      if (result.ok) {
-        db.prepare('UPDATE buffered_corrections SET synced = 1 WHERE id = ?').run(item.id);
+        if (result.ok) {
+          db.prepare('UPDATE buffered_corrections SET synced = 1 WHERE id = ?').run(item.id);
+        }
+      } catch (e) {
+        console.error(`[SYNC] Erro ao reconciliar item ${item.id}:`, e.message);
       }
-    } catch (e) {
-      console.error(`[SYNC] Erro ao reconciliar item ${item.id}:`, e.message);
     }
+  } finally {
+    if (ecoClient) ecoClient.release();
   }
 }
 
@@ -140,8 +156,9 @@ async function getSyncStatus() {
   }
 }
 
-async function loadApprovedAction(id) {
-  const result = await ecoPool.query(`
+async function loadApprovedAction(id, client = null) {
+  const queryExecutor = client || ecoPool;
+  const result = await queryExecutor.query(`
     SELECT id, idpessoa, campo, valor_novo, tipo_acao, nome_pessoa, status
     FROM acoes_pendentes
     WHERE id = $1::integer
@@ -149,7 +166,7 @@ async function loadApprovedAction(id) {
       AND COALESCE(status, 'PENDENTE') = CAST($2 AS text)
     LIMIT 1
   `, [id, ACTION_STATUS.APPROVED]);
-  if (result.rowCount === 0) throw new Error(`Acao ${id} nao esta aprovada para sincronizacao`);
+  if (result.rowCount === 0 || !result.rows[0]) throw new Error(`Acao ${id} nao esta aprovada para sincronizacao`);
   return result.rows[0];
 }
 
@@ -163,14 +180,18 @@ async function performSync(items, options = {}) {
   if (actionIds.length === 0) return { ok: true, syncedCount: 0, results: [] };
 
   let mirrorClient;
+  let ecoClient;
 
   try {
     mirrorClient = await pool.connect();
+    ecoClient = await ecoPool.connect();
 
     for (const id of actionIds) {
       let action = { id };
       try {
-        action = await loadApprovedAction(id);
+        const approvedAction = await loadApprovedAction(id, ecoClient);
+        action = { ...action, ...approvedAction };
+        
         const target = resolveSyncTarget(action.campo);
         const previewSql = `UPDATE ${target.tableName} SET ${action.campo} = CAST($1 AS text) WHERE idpessoa = CAST($2 AS text)`;
 
@@ -185,7 +206,7 @@ async function performSync(items, options = {}) {
           continue;
         }
 
-        await withEcoTransaction((client) => markActionExecutionStarted(client, action.id, usuario));
+        await withEcoTransaction((client) => markActionExecutionStarted(client, action.id, usuario), ecoClient);
 
         const updateResult = await mirrorClient.query(
           previewSql,
@@ -202,7 +223,7 @@ async function performSync(items, options = {}) {
             SET sincronizado = true
             WHERE idpessoa = CAST($1 AS text) AND campo = CAST($2 AS text)
           `, [action.idpessoa, action.campo]);
-        });
+        }, ecoClient);
 
         // TRIGGER OMNICHANNEL NOTIFICATION
         const omnichannel = require('./omnichannelService');
@@ -237,7 +258,7 @@ async function performSync(items, options = {}) {
         }
 
         try {
-          await withEcoTransaction((client) => markActionExecutionError(client, action.id, e, usuario));
+          await withEcoTransaction((client) => markActionExecutionError(client, action.id, e, usuario), ecoClient);
         } catch (logErrorMsg) {
           console.error('[CRITICAL] Failed to update action status in local DB:', logErrorMsg.message);
         }
@@ -257,6 +278,7 @@ async function performSync(items, options = {}) {
     return { error: e.message };
   } finally {
     if (mirrorClient) mirrorClient.release();
+    if (ecoClient) ecoClient.release();
   }
 }
 

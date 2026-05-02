@@ -8,8 +8,9 @@ const { getLocalDb } = require('../localDb');
 const intel = require('./intelligenceService');
 const notifier = require('./notificationService');
 
-async function saveCorrection(payload) {
-  let client;
+async function saveCorrection(payload, existingClient = null) {
+  let client = existingClient;
+  let ownsClient = false;
   let idpessoa = '0';
   try {
     const normalized = normalizeCorrectionPayload(payload);
@@ -22,7 +23,6 @@ async function saveCorrection(payload) {
     });
 
     if (await isOfflineMode()) {
-      // ... (offline logic remains the same)
       console.log('[CORRECTION] Offline detectado. Buffering no SQLite.');
       const db = getLocalDb();
       const insert = db.prepare(`
@@ -39,8 +39,11 @@ async function saveCorrection(payload) {
       return { ok: true, buffered: true };
     }
 
-    client = await ecoPool.connect();
-    await client.query('BEGIN');
+    if (!client) {
+      client = await ecoPool.connect();
+      ownsClient = true;
+      await client.query('BEGIN');
+    }
 
     for (const change of normalized.changes) {
       await client.query(`
@@ -155,13 +158,16 @@ async function saveCorrection(payload) {
       }
     }
 
-    await client.query('COMMIT');
+    if (ownsClient) {
+      await client.query('COMMIT');
+    }
+
     for (const change of normalized.changes) {
       await logEvent('CORRECTION_SAVED', normalized.idpessoa, `Campo ${change.campo} corrigido para ${change.valorNovo}`, normalized.criadoPor);
     }
     return { ok: true };
   } catch (e) {
-    if (client) {
+    if (ownsClient && client) {
       try {
         await client.query('ROLLBACK');
       } catch (rollbackError) {
@@ -171,7 +177,9 @@ async function saveCorrection(payload) {
     await logError('CORRECTION', e, idpessoa, payload?.criadoPor || 'sistema');
     return { error: e.message };
   } finally {
-    if (client) client.release();
+    if (ownsClient && client) {
+      client.release();
+    }
   }
 }
 

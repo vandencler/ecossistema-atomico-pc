@@ -18,6 +18,19 @@ function makeService() {
   const ecoClient = {
     query: async (sql, params) => {
       ecoQueries.push({ sql, params });
+      if (sql.includes('FROM acoes_pendentes') && sql.includes('WHERE id = $1')) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: params[0],
+            idpessoa: '42',
+            campo: 'email',
+            valor_novo: 'novo@example.com',
+            tipo_acao: 'ALTERAR_CAMPO',
+            status: 'APROVADO'
+          }]
+        };
+      }
       return { rowCount: 1, rows: [] };
     },
     release: () => {}
