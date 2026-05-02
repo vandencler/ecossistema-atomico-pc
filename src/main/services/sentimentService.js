@@ -1,14 +1,15 @@
-﻿const { ecoPool } = require('../db');
+const { ecoPool } = require('../db');
 const { logError, logEvent } = require('./logService');
 
 /**
  * Sentiment Service
- * Handles keyword-based sentiment analysis for inbound messages.
+ * Handles advanced keyword-based sentiment analysis for inbound messages and UX feedback.
+ * Features time-decay weighting and cross-table integration.
  */
 class SentimentService {
   constructor() {
-    this.negWords = ['lento', 'travando', 'erro', 'ruim', 'dificil', 'bug', 'parou', 'problema', 'pessimo', 'atraso'];
-    this.posWords = ['rapido', 'facil', 'ajudou', 'bom', 'parabens', 'top', 'otimo', 'excelente', 'vendi', 'sucesso', 'sensacional', 'maravilha', 'show'];
+    this.negWords = ['lento', 'travando', 'erro', 'ruim', 'dificil', 'bug', 'parou', 'problema', 'pessimo', 'atraso', 'falha', 'horrível', 'limitado', 'confuso', 'complicado'];
+    this.posWords = ['rapido', 'facil', 'ajudou', 'bom', 'parabens', 'top', 'otimo', 'excelente', 'vendi', 'sucesso', 'amando', 'perfeito', 'incrível', 'parabéns', 'agilidade'];
   }
 
   /**
@@ -22,64 +23,124 @@ class SentimentService {
   }
 
   /**
-   * Analyzes a single message and updates the client sentiment record.
+   * Re-calculates and updates the global sentiment for a client.
+   * Considers messages and UX feedback with time-decay.
    */
-  async analyzeMessage(idpessoa, content) {
-    if (!content) return;
-    const msg = this.normalize(content);
-
-    let negHits = 0;
-    let posHits = 0;
-
-    this.negWords.forEach(w => { if (msg.includes(this.normalize(w))) negHits++; });
-    this.posWords.forEach(w => { if (msg.includes(this.normalize(w))) posHits++; });
-
-    if (negHits === 0 && posHits === 0) return;
-
-    let score = 0;
-    if (negHits > posHits) {
-      score = -0.5 * Math.min(2, negHits);
-    } else if (posHits > negHits) {
-      score = 0.5 * Math.min(2, posHits);
-    }
-
-    const label = score < -0.2 ? 'NEGATIVE' : (score > 0.2 ? 'POSITIVE' : 'NEUTRAL');
-
+  async refreshClientSentiment(idpessoa) {
     try {
+      // 1. Fetch recent messages
+      const msgRes = await ecoPool.query(`
+        SELECT conteudo, criado_em
+        FROM omnichannel_mensagens
+        WHERE idpessoa = $1 AND direcao = 'INBOUND'
+          AND criado_em > CURRENT_TIMESTAMP - INTERVAL '30 days'
+      `, [idpessoa]);
+
+      // 2. Fetch recent UX feedback
+      const uxRes = await ecoPool.query(`
+        SELECT satisfaction, comment, criado_em
+        FROM app_feedback
+        WHERE user_id = $1
+          AND criado_em > CURRENT_TIMESTAMP - INTERVAL '30 days'
+      `, [idpessoa]);
+
+      let totalScore = 0;
+      let totalWeight = 0;
+      let lastAt = null;
+      const now = new Date();
+
+      // Process Messages
+      msgRes.rows.forEach(r => {
+        const msg = this.normalize(r.conteudo);
+        let msgScore = 0;
+        let negHits = 0;
+        let posHits = 0;
+        
+        this.negWords.forEach(w => { if (msg.includes(this.normalize(w))) negHits++; });
+        this.posWords.forEach(w => { if (msg.includes(this.normalize(w))) posHits++; });
+
+        if (negHits > posHits) msgScore = -1;
+        else if (posHits > negHits) msgScore = 1;
+        
+        if (msgScore !== 0) {
+          const ageDays = (now - new Date(r.criado_em)) / (1000 * 60 * 60 * 24);
+          const weight = Math.max(0.2, 1.0 - (ageDays / 30));
+          totalScore += msgScore * weight;
+          totalWeight += weight;
+        }
+        if (!lastAt || r.criado_em > lastAt) lastAt = r.criado_em;
+      });
+
+      // Process UX Feedback
+      uxRes.rows.forEach(r => {
+        // Map satisfaction 1 -> -1, 2 -> 0, 3 -> 1
+        const mappedScore = r.satisfaction === 1 ? -1 : (r.satisfaction === 3 ? 1 : 0);
+        const ageDays = (now - new Date(r.criado_em)) / (1000 * 60 * 60 * 24);
+        const weight = Math.max(0.4, 1.2 - (ageDays / 30)); // Higher weight for formal feedback
+        
+        totalScore += mappedScore * weight;
+        totalWeight += weight;
+
+        // Also analyze comment if present
+        if (r.comment) {
+          const comment = this.normalize(r.comment);
+          let cScore = 0;
+          this.negWords.forEach(w => { if (comment.includes(this.normalize(w))) cScore--; });
+          this.posWords.forEach(w => { if (comment.includes(this.normalize(w))) cScore++; });
+          
+          if (cScore !== 0) {
+            totalScore += (cScore > 0 ? 1 : -1) * weight * 0.5; // Modifier weight
+            totalWeight += weight * 0.5;
+          }
+        }
+        if (!lastAt || r.criado_em > lastAt) lastAt = r.criado_em;
+      });
+
+      if (totalWeight === 0) return;
+
+      const finalScore = totalScore / totalWeight;
+      const label = finalScore < -0.2 ? 'NEGATIVE' : (finalScore > 0.2 ? 'POSITIVE' : 'NEUTRAL');
+
       await ecoPool.query(`
         INSERT INTO ml_client_sentiment (idpessoa, sentiment_score, sentiment_label, last_message_at)
-        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (idpessoa) DO UPDATE SET
-          sentiment_score = (ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0,
-          sentiment_label = CASE
-            WHEN ((ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0) < -0.2 THEN 'NEGATIVE'
-            WHEN ((ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0) > 0.2 THEN 'POSITIVE'
-            ELSE 'NEUTRAL'
-          END,
+          sentiment_score = EXCLUDED.sentiment_score,
+          sentiment_label = EXCLUDED.sentiment_label,
           last_message_at = EXCLUDED.last_message_at,
           calculado_em = CURRENT_TIMESTAMP
-      `, [idpessoa, score, label]);
+      `, [idpessoa, finalScore.toFixed(2), label, lastAt || now]);
 
-      await logEvent('ML_SENTIMENT_UPDATED', idpessoa, `Sentiment analyzed: ${label} (score: ${score})`);
     } catch (e) {
-      await logError('ML_SENTIMENT_ANALYSIS', e, idpessoa);
+      await logError('ML_SENTIMENT_REFRESH', e, idpessoa);
     }
   }
 
+  /**
+   * Alias for backward compatibility or individual message ingestion.
+   */
+  async analyzeMessage(idpessoa, content) {
+    await this.refreshClientSentiment(idpessoa);
+  }
+
+  /**
+   * Batch refresh for all active clients with recent interactions.
+   */
   async batchAnalyze() {
-    console.log('[SENTIMENT] Running batch analysis...');
+    console.log('[SENTIMENT] Running full system batch refresh...');
     try {
       const res = await ecoPool.query(`
-        SELECT idpessoa, conteudo, criado_em
-        FROM omnichannel_mensagens
-        WHERE direcao = 'INBOUND'
-        ORDER BY criado_em ASC
+        SELECT DISTINCT idpessoa FROM (
+          SELECT idpessoa FROM omnichannel_mensagens WHERE criado_em > NOW() - INTERVAL '30 days'
+          UNION
+          SELECT user_id as idpessoa FROM app_feedback WHERE criado_em > NOW() - INTERVAL '30 days'
+        ) t
       `);
 
       for (const row of res.rows) {
-        await this.analyzeMessage(row.idpessoa, row.conteudo);
+        await this.refreshClientSentiment(row.idpessoa);
       }
-      console.log(`[SENTIMENT] Batch analysis complete. Processed ${res.rows.length} messages.`);
+      console.log(`[SENTIMENT] Batch refresh complete for ${res.rowCount} clients.`);
     } catch (e) {
       await logError('ML_SENTIMENT_BATCH', e);
     }

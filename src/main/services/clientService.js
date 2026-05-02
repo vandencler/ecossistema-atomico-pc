@@ -474,7 +474,7 @@ async function getClientDashboard(rawIdPessoa) {
         GROUP BY pr.nmproduto, pr.cdchamada
         ORDER BY valor_total DESC
         LIMIT 10
-      `, [idpessoa]).then(res => res.rows).catch(async (e) => {
+      `, [idpessoa]).then(res => (res && res.rows) ? res.rows : []).catch(async (e) => {
         console.warn('[DASHBOARD] Falha ao buscar top produtos no ERP (docitem), usando cache:', e.message);
         return await getTopProductsOffline(idpessoa);
       });
@@ -566,22 +566,26 @@ async function getClientDashboard(rawIdPessoa) {
     `, [idpessoa]);
 
     const fixes = {};
-    corrections.rows.forEach((row) => {
-      fixes[row.campo] = row.valor_corrigido;
-    });
+    if (corrections && corrections.rows) {
+      corrections.rows.forEach((row) => {
+        fixes[row.campo] = row.valor_corrigido;
+      });
+    }
 
     const actionStatus = {};
-    actionStatuses.rows.forEach((row) => {
-      actionStatus[row.campo] = {
-        id: row.id,
-        status: row.status || 'PENDENTE',
-        criado_em: row.criado_em,
-        aprovado_em: row.aprovado_em,
-        rejeitado_em: row.rejeitado_em,
-        executado_em: row.executado_em,
-        erro_msg: row.erro_msg
-      };
-    });
+    if (actionStatuses && actionStatuses.rows) {
+      actionStatuses.rows.forEach((row) => {
+        actionStatus[row.campo] = {
+          id: row.id,
+          status: row.status || 'PENDENTE',
+          criado_em: row.criado_em,
+          aprovado_em: row.aprovado_em,
+          rejeitado_em: row.rejeitado_em,
+          executado_em: row.executado_em,
+          erro_msg: row.erro_msg
+        };
+      });
+    }
 
     const p = profile || {};
     Object.keys(FIELD_CONFIG).forEach((field) => {
