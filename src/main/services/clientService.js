@@ -193,7 +193,7 @@ async function searchClient(query) {
       // Sequential parameter indexing per token, starting after static params  
       const addParam = (val) => {
         params.push(String(val));
-        return "$" + params.length + "::text";
+        return '$' + params.length + '::text';
       };
 
       // 1. Name matches (Indexed)
@@ -259,7 +259,7 @@ async function searchClient(query) {
     });
 
     const scoreColumn = hasTrgm
-      ? `similarity(p.nmpessoa, CAST($2 AS text)) as score`
+      ? 'similarity(p.nmpessoa, CAST($2 AS text)) as score'
       : '0 as score';
 
     const priceJoin = canJoinPrices 

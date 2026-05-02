@@ -1,4 +1,4 @@
-import { MetricCard } from "./components.js";
+import { MetricCard } from './components.js';
 import { $, create, setChildren, stateMessage, toast } from '../utils.js';
 import { api } from '../api.js';
 
@@ -10,10 +10,10 @@ export async function loadSyncModule() {
 
   setChildren(list, stateMessage('Verificando divergencias...', 'muted'));
     setChildren(summary, [
-    MetricCard("Aprovadas", total, { type: "info" }),
-    MetricCard("Divergentes", divergent, { type: divergent > 0 ? "warn" : "success" }),
-    readyToExport > 0 ? MetricCard("Aguardando ERP", readyToExport, { type: "info" }) : null,
-    blocked ? MetricCard("Bloqueadas", blocked, { type: "error" }) : null
+    MetricCard('Aprovadas', total, { type: 'info' }),
+    MetricCard('Divergentes', divergent, { type: divergent > 0 ? 'warn' : 'success' }),
+    readyToExport > 0 ? MetricCard('Aguardando ERP', readyToExport, { type: 'info' }) : null,
+    blocked ? MetricCard('Bloqueadas', blocked, { type: 'error' }) : null
   ].filter(Boolean));
   setChildren(actions, []);
   actions.hidden = true;

@@ -40,11 +40,11 @@ async function request(method, path, body = null) {
 
 async function run() {
   const tasks = [
-    { id: "b2e15c36-7ba7-4462-a6b6-ad6478ef2f2e", status: 'done', comment: 'Telemetry Identity implemented. System now supports OS username fallback and manual override in Settings. Persisted in `config_sistema`.', expected: ["in_progress"], name: 'EAV-108' },
-    { id: "e444afef-7092-428d-bccf-8603aa350a4c", status: 'done', comment: 'WhatsApp Onboarding messages configured in OmnichannelService.js and seeded in database.', expected: ["in_progress"], name: 'EAV-103' },
-    { id: "3654a02d-4eaf-42d2-b1dc-732aa5a726f9", status: 'done', comment: 'Support Link and WhatsApp Support button added to Settings tab. CSS and HTML updated for consistent UI.', expected: ["backlog", "todo"], name: 'EAV-107' },
-    { id: "62372f88-51f7-41a4-9669-0dfa02476721", status: 'done', comment: 'Duplicate of [EAV-107](/EAV/issues/EAV-107). Closed as part of UI standardization.', expected: ["in_progress"], name: 'EAV-104' },
-    { id: "9dee43ea-2cc9-4568-9eca-8c58ee0ce62f", status: 'done', comment: 'Onboarding Cheat Sheet and FAQ approved and verified in `docs/onboarding/`.', expected: ["in_review"], name: 'EAV-101' }
+    { id: 'b2e15c36-7ba7-4462-a6b6-ad6478ef2f2e', status: 'done', comment: 'Telemetry Identity implemented. System now supports OS username fallback and manual override in Settings. Persisted in `config_sistema`.', expected: ['in_progress'], name: 'EAV-108' },
+    { id: 'e444afef-7092-428d-bccf-8603aa350a4c', status: 'done', comment: 'WhatsApp Onboarding messages configured in OmnichannelService.js and seeded in database.', expected: ['in_progress'], name: 'EAV-103' },
+    { id: '3654a02d-4eaf-42d2-b1dc-732aa5a726f9', status: 'done', comment: 'Support Link and WhatsApp Support button added to Settings tab. CSS and HTML updated for consistent UI.', expected: ['backlog', 'todo'], name: 'EAV-107' },
+    { id: '62372f88-51f7-41a4-9669-0dfa02476721', status: 'done', comment: 'Duplicate of [EAV-107](/EAV/issues/EAV-107). Closed as part of UI standardization.', expected: ['in_progress'], name: 'EAV-104' },
+    { id: '9dee43ea-2cc9-4568-9eca-8c58ee0ce62f', status: 'done', comment: 'Onboarding Cheat Sheet and FAQ approved and verified in `docs/onboarding/`.', expected: ['in_review'], name: 'EAV-101' }
   ];
 
   for (const task of tasks) {

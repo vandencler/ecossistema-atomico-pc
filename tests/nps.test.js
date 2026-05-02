@@ -58,7 +58,7 @@ async function testNps() {
     `);
 
     // 1. Setup telemetry
-    await ecoPool.query(`DELETE FROM telemetry_events WHERE user_id = $1`, [testUserId]);
+    await ecoPool.query('DELETE FROM telemetry_events WHERE user_id = $1', [testUserId]);
     await ecoPool.query(`
       INSERT INTO telemetry_events (event_name, user_id, occurred_at)
       VALUES ('login', $1, NOW() - INTERVAL '1 hour')
@@ -68,14 +68,14 @@ async function testNps() {
     await npsService.runCycle();
 
     // 3. Verify
-    const sent = await ecoPool.query("SELECT * FROM nps_scores WHERE user_id = $1", [testUserId]);
+    const sent = await ecoPool.query('SELECT * FROM nps_scores WHERE user_id = $1', [testUserId]);
     assert.ok(sent.rows.length > 0, 'Should have sent NPS');
 
     // 4. Inbound
     await npsService.processResponse(testIdPessoa, 'Nota 9');
 
     // 5. Final Verify
-    const res = await ecoPool.query("SELECT COUNT(*) as count FROM nps_scores WHERE idpessoa = $1 AND score = 9", [testIdPessoa]);
+    const res = await ecoPool.query('SELECT COUNT(*) as count FROM nps_scores WHERE idpessoa = $1 AND score = 9', [testIdPessoa]);
     assert.strictEqual(parseInt(res.rows[0].count), 1);
 
     console.log('✅ NPS Verification Success!');
@@ -84,8 +84,8 @@ async function testNps() {
     console.error('❌ NPS Verification Failed:', e.message);
     process.exit(1);
   } finally {
-    await ecoPool.query("DELETE FROM telemetry_events WHERE user_id = $1", [testUserId]);
-    await ecoPool.query("DELETE FROM nps_scores WHERE user_id = $1", [testUserId]);
+    await ecoPool.query('DELETE FROM telemetry_events WHERE user_id = $1', [testUserId]);
+    await ecoPool.query('DELETE FROM nps_scores WHERE user_id = $1', [testUserId]);
     process.exit(0);
   }
 }

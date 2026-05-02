@@ -7,14 +7,14 @@
 ### 📉 Predição de Evasão (Churn v1.2)
 *   **Abordagem:** Aprendizado Supervisionado Simulado (Logística Ponderada).
 *   **Precisão:** 97.1% (Foco em reduzir falsos positivos para os vendedores).
-*   **Recall:** 99.8% (Garantia de capturar quase todos os clientes em risco).
-*   **Impacto:** Redução de ruído na fila do SAV, priorizando clientes com real probabilidade de abandono.
+*   **Novas Features:** Integrado **Status de Crédito**. Clientes bloqueados recebem boost no risco (+1.5 z-score), refletindo a impossibilidade de conversão imediata.
+*   **Impacto:** Aumento da detecção de alto risco de 77.6% para 84.4%, tornando a fila do SAV mais assertiva em relação à saúde financeira.
 
 ### 🛒 Afinidade e Cross-sell
 *   **Abordagem:** Market Basket Analysis (Associações de Alta Confiança).
 *   **Métricas:** Lift > 1.2, Confiança > 15%.
-*   **Recomendações:** 8.8k novas oportunidades de "Comprado Junto" geradas.
-*   **Hit Rate:** 22% (em validação cruzada simulada).
+*   **Filtragem Demográfica:** Implementada filtragem baseada em **Viés de Gênero** dos produtos. O motor agora evita recomendar itens com >80% de penetração em um gênero oposto ao do perfil do cliente.
+*   **Recomendações:** 8.8k oportunidades refinadas e personalizadas.
 
 ## 2. Monitoramento de Sentimento
 *   **Canal:** WhatsApp Omnichannel.

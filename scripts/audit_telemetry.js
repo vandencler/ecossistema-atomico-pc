@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Auditing recent telemetry for errors...");
+        console.log('Auditing recent telemetry for errors...');
         const res = await ecoPool.query("SELECT * FROM log_eventos WHERE tipo LIKE '%ERROR%' AND criado_em > NOW() - INTERVAL '24 hours' ORDER BY criado_em DESC");
         console.table(res.rows.map(r => ({
             id: r.id,
@@ -11,7 +11,7 @@ async function run() {
             criado_em: r.criado_em
         })));
     } catch (e) {
-        console.error("Audit failed:", e.message);
+        console.error('Audit failed:', e.message);
     } finally {
         process.exit();
     }

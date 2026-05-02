@@ -87,7 +87,7 @@ function evaluateChurnModel() {
       baskets[iddoc].push(idprod);
     });
 
-    let hits = 0;
+    const hits = 0;
     let totalTests = 0;
 
     // Leave-one-out validation simulation
