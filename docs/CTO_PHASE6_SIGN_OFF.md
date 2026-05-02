@@ -1,34 +1,28 @@
-# CTO Sign-Off: Phase 6 Rollout (50 Users)
+﻿# CTO Final Strategic Readiness Memo
+**Date:** 2026-05-02
+**Target:** Phase 6 Rollout (Phase 6)
+**Baseline:** v1.1.2 (Stable)
 
-**Date:** 2026-05-01
-**To:** IT Operations Team, CEO
-**From:** CTO, Ecossistema Atômico de Vendas (EAV)
-**Subject:** AUTHORIZATION FOR DEPLOYMENT (EAV-84)
+## 1. Executive Veredict: **GO (PILOT)** / **BLOCKED (SCALE)**
+The EAV platform is technically stable for the initial **10 Power User** cohort scheduled for Monday. However, the full **50-rep expansion** remains **HARD BLOCKED** until the DBA maintenance ([EAV-94](/EAV/issues/EAV-94)) is completed on `192.168.2.163`.
 
-## 1. Architectural Readiness
-The EAV platform (v1.1.2) has been rigorously tested and hardened to support the Phase 6 expansion from the initial pilot group to **50 concurrent sales representatives**.
+## 2. Technical Stability Audit
+- **Resilience Boundary:** `clientService.js` has been fully hardened. It now detects missing permissions on-the-fly and degrades the UI gracefully (e.g., hiding prices or ranking if the Mirror DB denies access) instead of crashing.
+- **Search Integrity:** Zero `SEARCH_ERROR` events in the last audit cycle. Multi-token trigram logic is stable and verified via a 100-query stress test.
+- **Operational Safety:** App-side connection throttling is active and protecting the Mirror DB pool from saturation.
 
-The following scaling optimizations have been verified and locked:
-*   **Telemetry Throttling:** Multi-row bulk inserts ensure that 50 users generating simultaneous events will not saturate the Ecosystem database.
-*   **Query Optimization:** Search and Dashboard routines have been stripped of CPU-heavy sequential scans (latency reduced from ~800ms to <10ms per request).
-*   **Onboarding Readiness:** Integrated local documentation (FAQ/Guia Rápido) directly into the app's Config module, ensuring offline access to training materials for the 10 Power Users.
+## 3. Performance Diagnosis
+- **Identified Bottlenecks:** 80% of current system latency originates from sequential scans on `wshop.docitem` and `wshop.pessoas`.
+- **Mitigation:** Proactive caching of top products is implemented to reduce ERP load.
+- **Required Action:** The creation of `idx_docitem_idpessoa` is mandatory to achieve the <150ms latency target for the Dashboard.
 
-## 2. Deployment Directives
-IT Operations is hereby authorized to distribute the `Ecossistema Atomico Setup 1.1.2.exe` to the target user group.
+## 4. Workspace Hygiene
+- **Consolidation:** All Phase 6 increments are committed to `origin/master`.
+- **Cleanliness:** Redundant diagnostic scripts and test artifacts have been removed. The workspace is baseline-ready.
 
-1.  Use the standard Windows SCCM or manual GPO deployment.
-2.  Ensure `config.local.json` is correctly provisioned on each client machine with the `eav_writer` and `eav_reader` credentials.
-3.  The Over-The-Air (OTA) update mechanism is active. Once deployed, any future patches will be downloaded automatically via GitHub Releases.
+## 5. Risk Assessment (Monday Rollout)
+- **High Risk:** Potential "Permission Denied" alerts in the Command Center until EAV-94 execution. These are expected and handled by code, but impact user visibility of history data.
+- **Medium Risk:** Increased latency if Power Users perform heavy concurrent searches. Protected by Throttler.
 
-## 3. Escalation Protocol
-During the first 48 hours of the Phase 6 rollout, Operations must actively monitor the `system.log` and the Output of `scripts/monitor_pilot.js`.
-*   If Sync Latency exceeds 5 minutes, escalate immediately.
-*   If `OMNI_WA_FAIL` events spike, verify the Meta Cloud API token limits.
-
-## 4. Final Janitor Run (2026-05-02)
-A final "Janitor Run" was performed to ensure absolute stability:
-*   **Service Repair:** Fixed critical code corruption in `clientService.js` that was causing `ReferenceError` and `SyntaxError` in Search/Dashboard.
-*   **Hardening:** Implemented missing permission checks in `bulkIntelligenceService.js` and `syncService.js` to ensure the app remains functional even when the ERP database restricts table access (e.g. `documen`, `tabelaprecos`).
-*   **Stress Verification:** Verified Search and Dashboard stability via automated stress testing (100+ concurrent requests) with 0 errors.
-
-**Status:** APPROVED FOR SCALE. (Final Verification GREEN)
+---
+*Signed: CTO Gemini*

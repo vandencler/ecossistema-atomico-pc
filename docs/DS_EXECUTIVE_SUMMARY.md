@@ -17,9 +17,10 @@
 *   **Recomendações:** 8.8k oportunidades refinadas e personalizadas.
 
 ## 2. Monitoramento de Sentimento
-*   **Canal:** WhatsApp Omnichannel.
-*   **NPS Interno (eNPS):** 0.0 (Base inicial de 4 interações neutras).
-*   **Feedback de UX:** 2 interações recentes classificadas como 'Triste' (Requer atenção em usabilidade).
+*   **Canal:** WhatsApp Omnichannel e App UX Feedback.
+*   **Motor Atualizado:** O `SentimentService` agora utiliza **Recency Weighting** (mensagens novas pesam mais) e integra feedbacks diretos do app.
+*   **nPS Interno (eNPS):** Atualmente em 0.0 (base neutra), mas com viés positivo em reativações.
+*   **Distribuição:** 3 Positivos, 2 Negativos, 2 Neutros.
 
 ## 3. Experimentos em Curso (A/B Testing)
 *   **Fração do Tráfego:** 50/50.
