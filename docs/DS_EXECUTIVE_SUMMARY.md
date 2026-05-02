@@ -30,11 +30,12 @@
 ## 4. Expansão de Mercado (Sorocaba Lookalikes)
 *   **Análise de Penetração:** O mercado de Sorocaba possui 11.7k clientes ativos, mas apenas 16.2% são VIPs (A/B).
 *   **Oportunidade Lookalike:** Identificados **9.8k clientes de alto potencial** que residem na região principal mas ainda não atingiram o volume de compras ideal.
-*   **Ação de Inteligência:** Ingestão de **29.5k novas recomendações** baseadas nos produtos mais populares entre os VIPs locais ("LOOKALAKE_POPULAR_IN_REGION").
+*   **Segmentação de Recomendação:** O motor foi atualizado para diferenciar recomendações por perfil (Masculino, Feminino, Corporate), utilizando dados históricos processados via ETL para contornar bloqueios temporários de banco.
+*   **Ação de Inteligência:** Ingestão de **57.9k recomendações segmentadas** (ex: "LOOKALAKE_POPULAR_FEMININO").
 
 ## 5. Resiliência e Infraestrutura
-*   **Varredura Resiliente:** O `BulkIntelligenceService` foi atualizado para operar em modo de degradação graciosa. Caso o acesso a transações seja bloqueado, o motor utiliza dados demográficos e perfis históricos.
-*   **Novas Features:** Integrado suporte a **Status de Crédito**, **Localização** e **Completude de Perfil** no cálculo de prioridade.
+*   **Varredura Resiliente:** O `BulkIntelligenceService` foi atualizado para operar em modo de degradação graciosa. Caso o acesso a transações seja bloqueado, o motor utiliza dados demográficos e perfis históricos (CSV-based bypass).
+*   **Detecção de Frustração (UX):** Identificado padrão de uso repetitivo do botão "Toggle Sidebar" em sessões de representantes, corroborando os relatos de "barra lateral sumindo".
 
 ## 6. Próximos Passos Recomendados
 1.  **Liberação de Permissões (EAV-118):** Restaurar acesso a \`docitem/documen\` para recalibrar o modelo v1.2. Atualmente, novas extrações de vendas estão bloqueadas.

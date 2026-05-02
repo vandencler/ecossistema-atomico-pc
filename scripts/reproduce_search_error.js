@@ -1,23 +1,18 @@
-const { pool } = require("../src/main/db");
-const { searchClient } = require("../src/main/services/clientService");
+const { searchClient } = require('../src/main/services/clientService');
 
-async function test() {
-  const queries = [
-    "joao",
-    "123",
-    "test test"
-  ];
-
-  for (const q of queries) {
-    console.log(`Testing query: "${q}"`);
-    const res = await searchClient(q);
-    if (res.error) {
-      console.error(`ERROR for "${q}": ${res.error}`);
+async function testSearch() {
+  console.log('Testing searchClient...');
+  try {
+    const result = await searchClient('teste');
+    if (result.error) {
+      console.error('Search Result Error:', result.error);
     } else {
-      console.log(`Success for "${q}": ${res.rows.length} rows`);
+      console.log('Search Result Success, rows:', result.rows.length);
     }
+  } catch (e) {
+    console.error('Caught Error:', e);
   }
   process.exit(0);
 }
 
-test();
+testSearch();

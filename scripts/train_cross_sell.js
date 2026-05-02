@@ -82,13 +82,23 @@ async function trainCrossSellRules() {
     clientPurchases[idp].add(idprod);
   }
 
+  // Load Gender Bias
+  const biasPath = path.join(process.cwd(), 'ml_data', 'product_gender_bias.json');
+  const productBias = fs.existsSync(biasPath) ? JSON.parse(fs.readFileSync(biasPath, 'utf8')) : {};
+
   const client = await ecoPool.raw.connect();
   try {
+    // Fetch client genders
+    const profileRes = await client.query('SELECT idpessoa, sexo FROM ml_client_profiles');
+    const clientGenders = {};
+    profileRes.rows.forEach(r => clientGenders[r.idpessoa] = r.sexo);
+
     await client.query('BEGIN');
     let recCount = 0;
 
     for (const idp in clientPurchases) {
       const bought = clientPurchases[idp];
+      const gender = clientGenders[idp];
       const recs = {}; // { idprod_rec: max_weighted_score }
 
       for (const idprod of bought) {
@@ -96,6 +106,12 @@ async function trainCrossSellRules() {
         const productRules = rules.filter(r => r.a === idprod);
         for (const rule of productRules) {
           if (!bought.has(rule.b)) {
+            // GENDER FILTER
+            const bias = productBias[rule.b];
+            if (bias && gender && bias !== gender) {
+              continue; // Skip recommendation if it has strong bias for opposite gender
+            }
+
             const weight = (rule.confidence / 100) * Math.log(rule.lift + 1);
             recs[rule.b] = Math.max(recs[rule.b] || 0, weight);
           }

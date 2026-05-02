@@ -28,6 +28,11 @@ async function processChurnScores() {
   
   const client = await ecoPool.raw.connect();
   try {
+    // Pre-fetch profile status for all clients to avoid joining in loop
+    const profileRes = await client.query('SELECT idpessoa, stcredbloqueado FROM ml_client_profiles');
+    const profiles = {};
+    profileRes.rows.forEach(r => profiles[r.idpessoa] = r.stcredbloqueado);
+
     await client.query('BEGIN');
 
     for (const row of data) {
@@ -40,21 +45,23 @@ async function processChurnScores() {
       const ten = parseFloat(tenure || 0);
       const basket = parseFloat(avg_basket || 0);
       const div = parseFloat(group_div || 0);
+      const isBlocked = profiles[idpessoa] === true;
       
       /**
        * SIMULATED LOGISTIC REGRESSION WEIGHTS
-       * These weights are "learned" (estimated) to balance precision and recall.
        */
-      let z = -2.5; // Bias (Intercept)
+      let z = -2.5; 
       
-      // Feature Weighting
-      z += rec * 0.04;        // Recency is the strongest positive predictor of churn
-      z -= freq * 0.15;       // Frequency reduces churn risk
-      z -= Math.log10(val + 1) * 0.2; // Higher LTV reduces risk
-      z -= (div > 3 ? 0.8 : 0); // Category diversity is a loyalty indicator
-      z -= (ten > 365 ? 0.5 : 0); // Long-term tenure reduces risk
-      z += (basket < 2 && freq > 5 ? 0.3 : 0); // Small baskets in active users might indicate drift
+      z += rec * 0.04;        
+      z -= freq * 0.15;       
+      z -= Math.log10(val + 1) * 0.2; 
+      z -= (div > 3 ? 0.8 : 0); 
+      z -= (ten > 365 ? 0.5 : 0); 
+      z += (basket < 2 && freq > 5 ? 0.3 : 0); 
       
+      // Feature: Credit Blocked (Significant risk of non-engagement)
+      if (isBlocked) z += 1.5;
+
       const probability = sigmoid(z);
       const riskScore = probability * 100;
       

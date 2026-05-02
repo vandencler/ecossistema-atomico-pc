@@ -117,15 +117,15 @@ class BulkIntelligenceService {
 
         // Pre-fetch all ML, engagement, and profile data for the batch
         const [churnRes, sentimentRes, affinityRes, engagementRes, profileRes] = await Promise.all([
-          ecoPool.query('SELECT idpessoa, risk_score, confidence FROM ml_churn_risk WHERE idpessoa = ANY($1)', [batchIds]),
-          ecoPool.query('SELECT idpessoa, sentiment_score, sentiment_label FROM ml_client_sentiment WHERE idpessoa = ANY($1)', [batchIds]),
+          ecoPool.query('SELECT idpessoa, risk_score, confidence FROM ml_churn_risk WHERE idpessoa = ANY($1::text[])', [batchIds]),
+          ecoPool.query('SELECT idpessoa, sentiment_score, sentiment_label FROM ml_client_sentiment WHERE idpessoa = ANY($1::text[])', [batchIds]),
           ecoPool.query(`
             SELECT idpessoa, idproduto, affinity_score, reason_code
             FROM (
               SELECT idpessoa, idproduto, affinity_score, reason_code,
                      ROW_NUMBER() OVER (PARTITION BY idpessoa ORDER BY affinity_score DESC) as rn
               FROM ml_product_affinity
-              WHERE idpessoa = ANY($1)
+              WHERE idpessoa = ANY($1::text[])
             ) t WHERE rn = 1
           `, [batchIds]),
           ecoPool.query(`
@@ -134,10 +134,10 @@ class BulkIntelligenceService {
               COUNT(*) FILTER (WHERE direcao = 'INBOUND') as inbound_count,
               COUNT(*) FILTER (WHERE direcao = 'OUTBOUND') as outbound_count
             FROM omnichannel_mensagens
-            WHERE idpessoa = ANY($1) AND criado_em > CURRENT_TIMESTAMP - INTERVAL '7 days'
+            WHERE idpessoa = ANY($1::text[]) AND criado_em > CURRENT_TIMESTAMP - INTERVAL '7 days'
             GROUP BY idpessoa
           `, [batchIds]),
-          ecoPool.query('SELECT * FROM ml_client_profiles WHERE idpessoa = ANY($1)', [batchIds])
+          ecoPool.query('SELECT * FROM ml_client_profiles WHERE idpessoa = ANY($1::text[])', [batchIds])
         ]);
 
         const batchChurn = {}; churnRes.rows.forEach(r => batchChurn[r.idpessoa] = r);

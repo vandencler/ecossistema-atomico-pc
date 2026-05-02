@@ -7,4 +7,5 @@ node_modules/
 *.db-wal
 temp_*.json
 eav28_synthesis.json
+*.ps1
 
