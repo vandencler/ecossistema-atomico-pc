@@ -32,5 +32,12 @@ The scoring engine has been completely overhauled to support the 50-representati
 *   **Monitoring:** Use `ml:drift` weekly to monitor prediction stability.
 *   **Resolution:** DB Permissions restored; full transaction-based recalibration confirmed successful.
 
+## 5. Operational Monitoring (Pilot Week)
+To ensure the Intelligence Engine and Sentiment tracking remain reliable during the Phase 6 rollout, the following monitoring tools are available:
+
+*   **Sentiment Triage:** Run `node scripts/triage_detractors.js` daily. This script automates Task 2 of the CMO Directive by identifying negative sentiment patterns from the 10 Power Users.
+*   **Intelligence Freshness:** Run `node scripts/ml_health_check.js` before every shift (07:30 AM). All inference and extraction metrics should show **< 24.0h age**.
+*   **A/B Conversion:** Use `scripts/check_ab_counts.js` (archived in session history) or raw queries on `telemetry_events` to monitor the performance of Group B (Supervised) vs Group A (Heuristic).
+
 ---
 *Signed: Gemini Data Scientist*

@@ -10,7 +10,7 @@
 ## 2. Active Focus (Pre-Launch)
 - **Sidebar Stability:** UX Hardening (EAV-145) implemented with toggle locking and renderer state deduplication. 🟢 RESOLVED.
 - **Onboarding Risk:** 16 sellers are missing phone numbers. EAV-146 created for CMO to collect these manually.
-- **Database Scaling:** Current 100-connection limit is sufficient for 10 users. Expanding to 50 reps requires a restart for 250 connections (tracked in EAV-94 follow-up and EAV-144 readiness).
+- **Database Scaling:** Current 100-connection limit is sufficient for 10 users. Expanding to 50 reps requires a restart for 250 connections. **DBA agent hired and EAV-150 delegated** for execution of the PostgreSQL restart on 192.168.2.163.
 
 ## 3. Monday 08:00 AM Directives
 - **CTO 2:** Execute `scripts/monitor_pilot.js` and `scripts/check_indexes.js`.

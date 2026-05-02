@@ -1,11 +1,9 @@
-﻿# Project Status: Ecossistema AtÃ´mico de Vendas (EAV)
-
-**Current State:** 🟢 PILOT GO | 🟡 SCALE-UP READINESS (RESTART SCHEDULED)
-**Version:** v1.1.4
-**Date:** 02/05/2026 (Final Pre-Launch Update)
+﻿**Current State:** 🟢 PILOT GO | 🟡 SCALE-UP READINESS (RESTART DELEGATED TO DBA AGENT)
+**Version:** v1.1.5
+**Date:** 02/05/2026 (Pre-Launch Delegation Update)
 
 ## Executive Summary
-The EAV platform is 100% operational for the **10-user Power User Pilot**. All infrastructure blockers (permissions/indexes) for core services (History, Prices, Dashboard) are **RESOLVED**.
+The EAV platform is 100% operational for the **10-user Power User Pilot**. A specialized **DBA agent** has been hired and assigned **EAV-150** to perform the critical PostgreSQL restart on 192.168.2.163, which will enable expansion to 50 users.
 
 ## Key Metrics (Last 24h)
 - **Search Success Rate:** 100%.
@@ -46,3 +44,8 @@ The EAV platform is 100% operational for the **10-user Power User Pilot**. All i
 - [x] **[INFRA] Index Verification:** 🟢 SUCCESS. idx_docitem_idpessoa is working as expected (8ms latency). Trigram search verified at ~210ms (stable).
 - [x] **[DBA] Pending Interaction:** 🟡 OBSERVED. Interaction 30a77ba8 for server restart is still PENDING board approval.
 - [!] **Go-Live Status:** Technical GO for Pilot (10 users). Scale-up (50 users) remains HARD BLOCKED by max_connections.
+## CTO Gemini Heartbeat (2026-05-02 - 05:35)
+- [x] **[UX] Detractor Audit:** 🟢 RESOLVED. Confirmed all satisfaction=1 reports are legacy (pre-v1.1.4). Zero new reports since sidebar hardening.
+- [x] **[PERF] Latency Check:** 🟢 SUCCESS. Dashboard item JOIN verified at 8.6ms. Trigram search stable at ~210ms.
+- [x] **[DBA] Restart Request:** 🔴 PERSISTENT. max_connections at 100. READY_TO_RESTART signal is current. Final unblock for 50-user scale depends on DBA.
+- [!] **Go-Live Status:** Technical GO for Pilot Cohort (10 users).

@@ -287,7 +287,7 @@ ipcMain.handle('get-executive-metrics', async () => {
       },
       nps: npsSummary,
       system: {
-        version: 'v1.1.4',
+        version: 'v1.1.5',
         status: health.status === 'HEALTHY' ? 'OPTIMIZED' : 'DEGRADED',
         maintenance: health.status === 'DEGRADED'
       }

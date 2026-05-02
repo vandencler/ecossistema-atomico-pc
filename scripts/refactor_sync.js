@@ -1,14 +1,14 @@
 
 const cwd = process.cwd();
-if (!cwd.toLowerCase().includes("-pc")) {
+if (!cwd.toLowerCase().includes('-pc')) {
     console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
-    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    console.error('This script MUST be executed from D:\projetos\ecossistema-atomico-pc');
     process.exit(1);
 }
 
-const fs = require("fs");
-const path = "src/main/services/syncService.js";
-let code = fs.readFileSync(path, "utf8");
+const fs = require('fs');
+const path = 'src/main/services/syncService.js';
+let code = fs.readFileSync(path, 'utf8');
 
 // 1. Add helper to run fn in transaction using existing client
 const helperInjection = `
@@ -29,7 +29,7 @@ async function runInClientTransaction(client, fn) {
 }
 `;
 
-code = code.replace("async function withEcoTransaction(fn) {", helperInjection + "\nasync function withEcoTransaction(fn) {");
+code = code.replace('async function withEcoTransaction(fn) {', helperInjection + '\nasync function withEcoTransaction(fn) {');
 
 // 2. Refactor performSync to use persistent ecoClient
 const performSyncOld = `async function performSync(items, options = {}) {
@@ -170,4 +170,4 @@ const finallyNew = `  } finally {
 code = code.replace(finallyOld, finallyNew);
 
 fs.writeFileSync(path, code);
-console.log("Refactored performSync for connection resilience.");
+console.log('Refactored performSync for connection resilience.');

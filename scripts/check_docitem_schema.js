@@ -1,8 +1,8 @@
 
 const cwd = process.cwd();
-if (!cwd.toLowerCase().includes("-pc")) {
+if (!cwd.toLowerCase().includes('-pc')) {
     console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
-    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    console.error('This script MUST be executed from D:\projetos\ecossistema-atomico-pc');
     process.exit(1);
 }
 
@@ -25,7 +25,7 @@ async function check() {
     `);
     console.log('Index definition:', idx.rows);
     
-    const count = await pool.query(`SELECT count(*) FROM wshop.docitem`);
+    const count = await pool.query('SELECT count(*) FROM wshop.docitem');
     console.log('Total rows in docitem:', count.rows[0].count);
 
   } catch (e) {
