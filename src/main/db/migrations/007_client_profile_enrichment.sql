@@ -1,0 +1,1 @@
+-- This migration was deprecated and replaced by 007_client_profile_ml.sql to avoid table mismatch in SQLite.

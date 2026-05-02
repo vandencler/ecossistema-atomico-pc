@@ -79,7 +79,7 @@ async function getSyncStatus() {
     const pending = await ecoPool.query(`
       SELECT id, idpessoa, campo, valor_novo, tipo_acao, nome_pessoa, aprovado_por, aprovado_em
       FROM acoes_pendentes
-      WHERE COALESCE(status, 'PENDENTE') = $1
+      WHERE COALESCE(status, 'PENDENTE') = $1::text
       ORDER BY criado_em ASC
       LIMIT 100
     `, [ACTION_STATUS.APPROVED]);
@@ -87,7 +87,7 @@ async function getSyncStatus() {
     const readyToExportResult = await ecoPool.query(`
       SELECT COUNT(*) as count 
       FROM acoes_pendentes 
-      WHERE status = $1 AND lote_id IS NULL
+      WHERE status = $1::text AND lote_id IS NULL
     `, [ACTION_STATUS.DONE]);
 
     const items = await Promise.all(pending.rows.map(async (row) => {
@@ -99,7 +99,7 @@ async function getSyncStatus() {
       }
 
       const mirrorVal = await pool.query(
-        `SELECT ${row.campo} FROM ${target.tableName} WHERE idpessoa = $1`,
+        `SELECT ${row.campo} FROM ${target.tableName} WHERE idpessoa = $1::text`,
         [row.idpessoa]
       );
       const valorMirror = mirrorVal.rows[0]?.[row.campo];
@@ -116,7 +116,7 @@ async function getSyncStatus() {
         approvedBy: row.aprovado_por,
         approvedAt: row.aprovado_em,
         needsSync: String(row.valor_novo) !== String(valorMirror ?? ''),
-        previewSql: `UPDATE ${target.tableName} SET ${row.campo} = $1 WHERE idpessoa = $2`
+        previewSql: `UPDATE ${target.tableName} SET ${row.campo} = $1::text WHERE idpessoa = $2::text`
       };
     }));
 
@@ -134,9 +134,9 @@ async function loadApprovedAction(id) {
   const result = await ecoPool.query(`
     SELECT id, idpessoa, campo, valor_novo, tipo_acao, nome_pessoa, status
     FROM acoes_pendentes
-    WHERE id = $1
+    WHERE id = $1::integer
       AND tipo_acao = 'ALTERAR_CAMPO'
-      AND COALESCE(status, 'PENDENTE') = $2
+      AND COALESCE(status, 'PENDENTE') = $2::text
     LIMIT 1
   `, [id, ACTION_STATUS.APPROVED]);
   if (result.rowCount === 0) throw new Error(`Acao ${id} nao esta aprovada para sincronizacao`);
@@ -162,7 +162,7 @@ async function performSync(items, options = {}) {
       try {
         action = await loadApprovedAction(id);
         const target = resolveSyncTarget(action.campo);
-        const previewSql = `UPDATE ${target.tableName} SET ${action.campo} = $1 WHERE idpessoa = $2`;
+        const previewSql = `UPDATE ${target.tableName} SET ${action.campo} = $1::text WHERE idpessoa = $2::text`;
 
         if (dryRun) {
           results.push({
@@ -190,7 +190,7 @@ async function performSync(items, options = {}) {
           await client.query(`
             UPDATE correcoes_campos
             SET sincronizado = true
-            WHERE idpessoa = $1 AND campo = $2
+            WHERE idpessoa = $1::text AND campo = $2::text
           `, [action.idpessoa, action.campo]);
         });
 
@@ -255,7 +255,7 @@ async function generateBatchScript() {
     const ready = await ecoPool.query(`
       SELECT id, idpessoa, campo, valor_novo, nome_pessoa, status
       FROM acoes_pendentes
-      WHERE status = $1 AND lote_id IS NULL
+      WHERE status = $1::text AND lote_id IS NULL
       ORDER BY criado_em ASC
     `, [ACTION_STATUS.DONE]);
 
@@ -290,12 +290,12 @@ async function markBatchAsExported(ids) {
   
   const res = await ecoPool.query(`
     INSERT INTO lotes_execucao (executado_por, total_acoes, observacoes)
-    VALUES ($1, $2, $3)
+    VALUES ($1::text, $2::integer, $3::text)
     RETURNING id
   `, ['sistema-batch-export', ids.length, `Lote gerado para exportação ERP em ${new Date().toLocaleString()}`]);
   
   const loteId = res.rows[0].id;
-  await ecoPool.query('UPDATE acoes_pendentes SET lote_id = $1 WHERE id = ANY($2::int[])', [loteId, ids]);
+  await ecoPool.query('UPDATE acoes_pendentes SET lote_id = $1::integer WHERE id = ANY($2::int[])', [loteId, ids]);
   return loteId;
 }
 

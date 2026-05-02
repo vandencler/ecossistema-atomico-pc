@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 const { readNumber } = require('./utils');
+const Throttler = require('./db/throttler');
 
 const LOCAL_CONFIG_PATH = path.join(__dirname, '..', '..', 'config.local.json');
 
@@ -20,7 +21,9 @@ const localConfig = readLocalConfig();
 const settings = {
   cacheTTL: readNumber(localConfig.settings?.cacheTTL, 24),
   autoSync: localConfig.settings?.autoSync === true,
-  syncInterval: readNumber(localConfig.settings?.syncInterval, 5)
+  syncInterval: readNumber(localConfig.settings?.syncInterval, 5),
+  throttleMirror: readNumber(localConfig.settings?.throttleMirror, 4),
+  throttleEco: readNumber(localConfig.settings?.throttleEco, 8)
 };
 
 function readEnv(prefix, key) {
@@ -39,11 +42,11 @@ function dbConfig(configKey, envPrefix, fallback) {
       readEnv(envPrefix, 'CONNECTION_TIMEOUT') || fileConfig.connectionTimeoutMillis,
       fallback.connectionTimeoutMillis || 5000
     ),
-    max: readNumber(readEnv(envPrefix, 'MAX') || fileConfig.max, fallback.max || 3)
+    max: readNumber(readEnv(envPrefix, 'MAX') || fileConfig.max, fallback.max || 5)
   };
 }
 
-const pool = new Pool(dbConfig('mirror', 'MIRROR', {
+const mirrorPool = new Pool(dbConfig('mirror', 'MIRROR', {
   host: '127.0.0.1',
   port: 5432,
   database: 'ALTERDATA_SHOP_ESPELHO',
@@ -51,11 +54,11 @@ const pool = new Pool(dbConfig('mirror', 'MIRROR', {
   max: 5
 }));
 
-pool.on('error', (err) => {
+mirrorPool.on('error', (err) => {
   console.error('Erro inesperado no Pool MIRROR:', err.message);
 });
 
-const ecoPool = new Pool(dbConfig('ecosystem', 'ECOSYSTEM', {
+const ecoPoolBase = new Pool(dbConfig('ecosystem', 'ECOSYSTEM', {
   host: '127.0.0.1',
   port: 5432,
   database: 'ECOSSISTEMA_ATOMICO',
@@ -63,9 +66,27 @@ const ecoPool = new Pool(dbConfig('ecosystem', 'ECOSYSTEM', {
   max: 10
 }));
 
-ecoPool.on('error', (err) => {
+ecoPoolBase.on('error', (err) => {
   console.error('Erro inesperado no Pool ECOSYSTEM:', err.message);
 });
+
+// Throttlers to prevent overloading the databases
+const mirrorThrottler = new Throttler('MIRROR', settings.throttleMirror, 15);
+const ecoThrottler = new Throttler('ECOSYSTEM', settings.throttleEco, 30);
+
+const pool = {
+  query: (text, params) => mirrorThrottler.run(() => mirrorPool.query(text, params)),
+  connect: () => mirrorPool.connect(),
+  raw: mirrorPool,
+  throttler: mirrorThrottler
+};
+
+const ecoPool = {
+  query: (text, params) => ecoThrottler.run(() => ecoPoolBase.query(text, params)),
+  connect: () => ecoPoolBase.connect(),
+  raw: ecoPoolBase,
+  throttler: ecoThrottler
+};
 
 module.exports = {
   pool,

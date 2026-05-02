@@ -237,6 +237,21 @@ CREATE TABLE IF NOT EXISTS config_sistema (
     atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table for tracking NPS surveys and scores
+CREATE TABLE IF NOT EXISTS nps_scores (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    idpessoa VARCHAR(40), -- Linked person ID if available
+    score INTEGER,
+    comentario TEXT,
+    status VARCHAR(20) DEFAULT 'SENT', -- SENT, RESPONDED, ERROR
+    enviado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    respondido_em TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_nps_user_id ON nps_scores(user_id);
+CREATE INDEX IF NOT EXISTS idx_nps_status ON nps_scores(status);
+
 -- Seed initial config
 INSERT INTO config_sistema (chave, valor, descricao)
 VALUES 
@@ -248,7 +263,10 @@ VALUES
   ('notifications_sav_new', 'true', 'Notificar sobre novas ações SAV (true/false)'),
   ('omnichannel_whatsapp_enabled', 'false', 'Habilitar envio automático de mensagens WhatsApp (true/false)'),
   ('whatsapp_api_url', 'https://graph.facebook.com/v17.0/PHONE_NUMBER_ID/messages', 'URL da API do WhatsApp Business'),
-  ('whatsapp_api_token', 'MOCK_TOKEN', 'Token de autenticação da API do WhatsApp')
+  ('whatsapp_api_token', 'MOCK_TOKEN', 'Token de autenticação da API do WhatsApp'),
+  ('nps_survey_enabled', 'true', 'Habilitar coleta automática de NPS (true/false)'),
+  ('nps_survey_delay_days', '2', 'Dias de uso antes de disparar o primeiro NPS'),
+  ('nps_survey_message', 'Olá! Você está usando o EAV há 48h. Em uma escala de 0 a 10, o quanto você recomendaria o sistema para um colega?', 'Mensagem do NPS')
 ON CONFLICT (chave) DO NOTHING;
 
 -- Indexes for performance
@@ -302,4 +320,14 @@ CREATE TABLE IF NOT EXISTS ml_product_affinity (
 
 CREATE INDEX IF NOT EXISTS idx_ml_affinity_pessoa ON ml_product_affinity(idpessoa);
 CREATE INDEX IF NOT EXISTS idx_ml_affinity_score ON ml_product_affinity(affinity_score DESC);
+
+-- Table for Application Feedback (Manual UX Feedback)
+CREATE TABLE IF NOT EXISTS app_feedback (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(100),
+    satisfaction INTEGER, -- 1: Sad, 2: Neutral, 3: Happy
+    comment TEXT,
+    device_info JSONB,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 

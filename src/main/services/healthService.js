@@ -70,6 +70,7 @@ async function checkHealth() {
         'idx_pessoas_phone_trgm': foundIndexes.includes('idx_pessoas_phone_trgm'),
         'hasTrgmExtension': hasTrgmExtension
       },
+      throttle: pool.throttler.getStats(),
       foundIndexes,
       missingIndexes: [
         ...(hasTrgmExtension ? [] : ['pg_trgm_extension']),
@@ -77,6 +78,19 @@ async function checkHealth() {
         ...(!phonesOptimized ? ['idx_pessoas_telwa_trgm', 'idx_pessoas_phone_trgm'] : [])
       ]
     };
+
+    // Table Accessibility Checks (Graceful Degradation Support)
+    const tablesToCheck = ['pessoas', 'tabelaprecos', 'crediar', 'docitem', 'documen', 'pessoas_endereco', 'documento_nfce', 'movcaix', 'tprec', 'produto', 'grupo'];
+    health.databases.mirror.accessibleTables = {};
+    for (const table of tablesToCheck) {
+      try {
+        await pool.query(`SELECT 1 FROM wshop.${table} LIMIT 1`);
+        health.databases.mirror.accessibleTables[table] = true;
+      } catch (tableErr) {
+        health.databases.mirror.accessibleTables[table] = false;
+        console.warn(`[HEALTH] Tabela wshop.${table} nao acessivel: ${tableErr.message}`);
+      }
+    }
 
     if (!optimized) {
       health.status = 'DEGRADED';
@@ -106,7 +120,8 @@ async function checkHealth() {
     health.databases.ecosystem = { 
       status: 'OK', 
       latencyMs: Date.now() - start,
-      cacheRows: cacheCount
+      cacheRows: cacheCount,
+      throttle: ecoPool.throttler.getStats()
     };
 
     // Telemetry and Sync Diagnostics

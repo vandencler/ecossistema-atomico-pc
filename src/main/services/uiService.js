@@ -8,6 +8,7 @@ class UIService {
     this.COLLAPSED_WIDTH = 36;
     this.COLLAPSED_HEIGHT = 36;
     this.mainWindow = null;
+    this.tagY = -1;
   }
 
   setWindow(window) {
@@ -21,13 +22,16 @@ class UIService {
   }
 
   toggleSidebar() {
+    const { logEvent } = require('./logService');
     if (!this.mainWindow) return false;
     this.isExpanded = !this.isExpanded;
 
     if (this.isExpanded) {
       this.showExpanded();
+      logEvent('UI_SIDEBAR_EXPAND', '0', 'Sidebar expandida pelo usuario');
     } else {
       this.showCollapsed();
+      logEvent('UI_SIDEBAR_COLLAPSE', '0', 'Sidebar recolhida pelo usuario');
     }
 
     return this.isExpanded;
@@ -41,6 +45,7 @@ class UIService {
     this.mainWindow.setBounds({ x: x + w - this.SIDEBAR_WIDTH, y, width: this.SIDEBAR_WIDTH, height: h });
     this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     this.mainWindow.show();
+    this.mainWindow.restore(); // Ensure it is not minimized
     this.mainWindow.focus();
     this.mainWindow.moveTop();
     this.mainWindow.webContents.send('sidebar-toggled', true);
@@ -50,15 +55,29 @@ class UIService {
   showCollapsed() {
     if (!this.mainWindow) return false;
     const { x, y, w, h } = this.getScreenEdge();
-    const tagY = y + Math.round(h * 0.25);
+    if (this.tagY === -1) this.tagY = y + Math.round(h * 0.25);
+    const tagY = this.tagY;
     this.isExpanded = false;
-    this.mainWindow.setOpacity(0.95);
+    this.mainWindow.setOpacity(1.0);
     this.mainWindow.setBounds({ x: x + w - this.COLLAPSED_WIDTH, y: tagY, width: this.COLLAPSED_WIDTH, height: this.COLLAPSED_HEIGHT });
     this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     this.mainWindow.show();
     this.mainWindow.moveTop();
     this.mainWindow.webContents.send('sidebar-toggled', false);
     return true;
+  }
+
+  
+  revalidateBounds() {
+    if (!this.mainWindow) return;
+    const bounds = this.mainWindow.getBounds();
+    const s = this.getScreenEdge();
+    
+    // If window is completely off-screen, reset it
+    if (bounds.x < s.x - 100 || bounds.x > s.x + s.w + 100) {
+      console.warn('[UI] Window out of bounds detected, resetting...');
+      this.isExpanded ? this.showExpanded() : this.showCollapsed();
+    }
   }
 
   getState() {
@@ -72,6 +91,7 @@ class UIService {
     const safeDelta = readNumber(deltaY, 0);
     let newY = bounds.y + safeDelta;
     newY = Math.max(waY, Math.min(newY, waY + waH - this.COLLAPSED_HEIGHT));
+    this.tagY = newY;
     this.mainWindow.setBounds({ x: bounds.x, y: newY, width: bounds.width, height: bounds.height });
   }
 
@@ -95,7 +115,10 @@ class UIService {
     if (this.isExpanded) {
       this.mainWindow.setBounds({ x: s.x + s.w - this.SIDEBAR_WIDTH, y: s.y, width: this.SIDEBAR_WIDTH, height: s.h });
     } else {
-      const tY = s.y + Math.round(s.h * 0.25);
+      if (this.tagY === -1) this.tagY = s.y + Math.round(s.h * 0.25);
+      // Ensure tagY is still on screen
+      this.tagY = Math.max(s.y, Math.min(this.tagY, s.y + s.h - this.COLLAPSED_HEIGHT));
+      const tY = this.tagY;
       this.mainWindow.setBounds({ x: s.x + s.w - this.COLLAPSED_WIDTH, y: tY, width: this.COLLAPSED_WIDTH, height: this.COLLAPSED_HEIGHT });
     }
   }

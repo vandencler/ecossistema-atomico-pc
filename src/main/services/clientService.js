@@ -1,5 +1,7 @@
 const { pool, ecoPool, settings } = require('../db');
 const { logError } = require('./logService');
+const { checkHealth, isOfflineMode, getLastHealth, isSearchOptimized, getIndexMap } = require('./healthService');
+
 const { trackEvent } = require('./telemetryService');
 const { 
   normalizeId, 
@@ -10,7 +12,7 @@ const {
 } = require('../utils');
 
 const { searchLocalCache } = require('./cacheService');
-const { isOfflineMode, getIndexMap } = require('./healthService');
+
 const { getLocalDb } = require('../localDb');
 
 const intel = require('./intelligenceService');
@@ -60,30 +62,34 @@ async function getClientRanking(idpessoa) {
     if (await isOfflineMode()) return { posicao: '-', abc: '-', total_clientes: 0 };
 
     // 1. Try ERP native ranking table
-    const erpRanking = await pool.query(`
-      WITH total AS (
-        SELECT COUNT(DISTINCT id_pessoa) AS total_clientes
-        FROM wshop.ranking_calculadoloja
-      )
-      SELECT
-        r.nr_ranking AS posicao,
-        total.total_clientes,
-        r.vl_compras AS total,
-        COALESCE(NULLIF(r.st_abc, ''), '-') AS abc
-      FROM wshop.ranking_calculadoloja r
-      CROSS JOIN total
-      WHERE r.id_pessoa = $1
-      ORDER BY r.nr_ranking NULLS LAST
-      LIMIT 1
-    `, [idpessoa]);
+    try {
+      const erpRanking = await pool.query(`
+        WITH total AS (
+          SELECT COUNT(DISTINCT id_pessoa) AS total_clientes
+          FROM wshop.ranking_calculadoloja
+        )
+        SELECT
+          r.nr_ranking AS posicao,
+          total.total_clientes,
+          r.vl_compras AS total,
+          COALESCE(NULLIF(r.st_abc, ''), '-') AS abc
+        FROM wshop.ranking_calculadoloja r
+        CROSS JOIN total
+        WHERE r.id_pessoa = CAST($1 AS text)
+        ORDER BY r.nr_ranking NULLS LAST
+        LIMIT 1
+      `, [idpessoa]);
 
-    if (erpRanking.rows[0]?.posicao) return erpRanking.rows[0];
+      if (erpRanking.rows[0]?.posicao) return erpRanking.rows[0];
+    } catch (e) {
+      console.warn('[RANKING] Tabela ranking_calculadoloja nao acessivel:', e.message);
+    }
 
-    // 2. Try Ecosystem Cache (expires in settings.cacheTTL hours)
+    // 2. Try Ecosystem Cache
     const localCache = await ecoPool.query(`
       SELECT posicao, total_clientes, total_compras AS total, abc
       FROM ranking_cache
-      WHERE idpessoa = $1 AND calculado_em > NOW() - (INTERVAL '1 hour' * $2)
+      WHERE idpessoa = CAST($1 AS text) AND calculado_em > NOW() - (INTERVAL '1 hour' * $2::integer)
     `, [idpessoa, settings.cacheTTL || 24]);
 
     if (localCache.rows[0]) return localCache.rows[0];
@@ -109,7 +115,7 @@ async function getClientRanking(idpessoa) {
                WHEN posicao <= total_clientes * 0.5 THEN 'B'
                ELSE 'C'
              END AS abc
-      FROM ranked WHERE idpessoa = $1
+      FROM ranked WHERE idpessoa = CAST($1 AS text)
     `, [idpessoa]);
 
     const result = ranking.rows[0] || { posicao: '-', abc: '-', total_clientes: 0, total: 0 };
@@ -118,7 +124,7 @@ async function getClientRanking(idpessoa) {
     if (result.posicao !== '-') {
       await ecoPool.query(`
         INSERT INTO ranking_cache (idpessoa, posicao, total_clientes, total_compras, abc, calculado_em)
-        VALUES ($1, $2, $3, $4, $5, NOW())
+        VALUES (CAST($1 AS text), $2::integer, $3::integer, $4::numeric, $5::text, NOW())
         ON CONFLICT (idpessoa) DO UPDATE SET
           posicao = EXCLUDED.posicao,
           total_clientes = EXCLUDED.total_clientes,
@@ -130,7 +136,7 @@ async function getClientRanking(idpessoa) {
 
     return result;
   } catch (e) {
-    await logError('RANKING', e, idpessoa);
+    console.error('[RANKING] Erro fatal no ranking:', e.message);
     return { posicao: '-', abc: '-', total_clientes: 0 };
   }
 }
@@ -138,7 +144,7 @@ async function getClientRanking(idpessoa) {
 async function applyTableNameOverlay(profile, fixes) {
   if (!fixes.idtabela) return;
   const table = await pool.query(
-    'SELECT dstabela FROM wshop.tabelaprecos WHERE idtabela = $1 LIMIT 1',
+    'SELECT dstabela FROM wshop.tabelaprecos WHERE idtabela = CAST($1 AS text) LIMIT 1',
     [fixes.idtabela]
   );
   if (table.rows[0]?.dstabela) profile.tabela_preco = table.rows[0].dstabela;
@@ -146,7 +152,7 @@ async function applyTableNameOverlay(profile, fixes) {
 
 async function searchClient(query) {
   try {
-    await trackEvent('CLIENT_SEARCH', 'unknown', { query });
+    await trackEvent('CLIENT_SEARCH', 'auto', { query });
 
     if (await isOfflineMode()) {
       console.log('[CLIENT] Modo offline detectado. Buscando no cache local.');
@@ -158,7 +164,10 @@ async function searchClient(query) {
 
     const indexMap = await getIndexMap();
     const hasTrgm = indexMap['hasTrgmExtension'] === true;
-    
+    const health = await getLastHealth();
+    const canJoinPrices = health.databases.mirror?.accessibleTables?.tabelaprecos !== false;
+
+
     const queryTrimmed = query.trim();
     const queryRaw = queryTrimmed.toLowerCase();
     const fullQueryParam = `%${queryRaw}%`;
@@ -169,22 +178,22 @@ async function searchClient(query) {
       queryRaw,       // $2
       queryTrimmed    // $3
     ];
-    
+
     const rawIdx = 2;
     const trimIdx = 3;
 
     const conditions = tokens.map((token) => {
       const textParam = `%${token}%`;
       const fuzzyParam = token;
-      const digitsOnly = token.replace(/\D/g, '');
+      const digitsOnly = token.replace(/\\D/g, '');
       const digitParam = digitsOnly.length > 0 ? `%${digitsOnly}%` : '%NOMATCH%';
 
       const subConditions = [];
 
-      // Sequential parameter indexing per token, starting after static params
+      // Sequential parameter indexing per token, starting after static params  
       const addParam = (val) => {
         params.push(String(val));
-        return '$' + params.length + '::text';
+        return "$" + params.length + "::text";
       };
 
       // 1. Name matches (Indexed)
@@ -231,8 +240,6 @@ async function searchClient(query) {
       }
 
       // 6. Generic fields (Non-indexed, use LIKE)
-      // FIX EAV-83: Only include non-indexed fields if Trigram is disabled. 
-      // Mixing them with OR forces a Seq Scan, ruining performance.
       if (!hasTrgm) {
         const tp = addParam(textParam);
         subConditions.push(`LOWER(p.nrincrest_rg) LIKE ${tp}`);
@@ -251,29 +258,36 @@ async function searchClient(query) {
       return `(${subConditions.join(' OR ')})`;
     });
 
-    const scoreColumn = hasTrgm 
-      ? `similarity(LOWER(p.nmpessoa), $${rawIdx}::text) as score`
-      : `0 as score`;
+    const scoreColumn = hasTrgm
+      ? `similarity(p.nmpessoa, CAST($2 AS text)) as score`
+      : '0 as score';
+
+    const priceJoin = canJoinPrices 
+      ? 'LEFT JOIN wshop.tabelaprecos t ON p.idtabela = t.idtabela' 
+      : '';
+    const priceColumn = canJoinPrices 
+      ? 't.dstabela AS tabela_preco' 
+      : "'-' AS tabela_preco";
 
     const sql = `
       SELECT p.idpessoa, p.cdchamada, p.nmpessoa, p.nmcurto, p.nrcgc_cic,
              p.email, p.nrtelefone, p.nrpager, p.campostelwhatsapp, p.stpessoa,
              p.sttipopessoa, p.stvendedor,
              p.dtcadastro, p.dtultimacompra, p.aldesconto,
-             t.dstabela AS tabela_preco,
+             ${priceColumn},
              cr.dtdatanasc, cr.sexo,
              ${scoreColumn}
       FROM wshop.pessoas p
-      LEFT JOIN wshop.tabelaprecos t ON p.idtabela = t.idtabela
+      ${priceJoin}
       LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
       WHERE ${conditions.join(' AND ')}
-      ORDER BY 
-        CASE 
-          WHEN p.cdchamada = $${trimIdx}::text THEN 0
-          WHEN LOWER(p.nmpessoa) = $${trimIdx}::text THEN 1
-          WHEN LOWER(p.nmpessoa) LIKE $1::text THEN 2
-          WHEN LOWER(p.nmcurto) LIKE $1::text THEN 3
-          ELSE 4 
+      ORDER BY
+        CASE
+          WHEN p.cdchamada = CAST($3 AS text) THEN 0
+          WHEN LOWER(p.nmpessoa) = CAST($2 AS text) THEN 1
+          WHEN p.nmpessoa LIKE CAST($1 AS text) THEN 2
+          WHEN p.nmcurto LIKE CAST($1 AS text) THEN 3
+          ELSE 4
         END,
         score DESC,
         p.dtultimacompra DESC NULLS LAST
@@ -283,11 +297,11 @@ async function searchClient(query) {
     const result = await pool.query(sql, params);
     return { rows: result.rows };
   } catch (e) {
-    await logError('SEARCH', e);
+    const errorMsg = `SEARCH_ERROR: ${e.message}. Query: ${query}`;
+    await logError('SEARCH', new Error(errorMsg));
     return { error: e.message };
   }
 }
-
 
 async function getBirthdayCustomers() {
   try {
@@ -361,7 +375,27 @@ async function getBirthdayCustomers() {
   }
 }
 
+async function getTopProductsOffline(idpessoa) {
+  try {
+    const db = getLocalDb();
+    return db.prepare(`
+      SELECT nmproduto, cdchamada, qtd_total, valor_total, vezes_comprado
+      FROM top_products_cache
+      WHERE idpessoa = ?
+      ORDER BY valor_total DESC
+      LIMIT 10
+    `).all(idpessoa);
+  } catch (e) {
+    console.error('[CACHE] Erro ao buscar top produtos offline:', e.message);
+    return [];
+  }
+}
+
 async function getClientDashboard(rawIdPessoa) {
+
+    const health = await getLastHealth();
+    const can = health.databases.mirror?.accessibleTables || {};
+
   let idpessoa = '0';
   try {
     idpessoa = normalizeId(rawIdPessoa, 'idpessoa');
@@ -383,7 +417,7 @@ async function getClientDashboard(rawIdPessoa) {
           dtultimacompra: cached.dtultimacompra
         },
         lastPurchases: [],
-        topProducts: [],
+        topProducts: await getTopProductsOffline(idpessoa),
         stats: {},
         paymentChannels: [],
         ranking: { posicao: '-', abc: '-', total_clientes: 0 },
@@ -392,31 +426,50 @@ async function getClientDashboard(rawIdPessoa) {
       };
     }
 
-    const [profile, lastPurchases, topProducts, stats, paymentChannels, ranking] = await Promise.all([
-      pool.query(`
-        SELECT p.*, t.dstabela AS tabela_preco,
-               pe.nmendereco AS end2, pe.nmbairro AS bairro2, pe.nmcidade AS cidade2,
-               cr.dtdatanasc, cr.sexo, cr.dsnatural
-        FROM wshop.pessoas p
-        LEFT JOIN wshop.tabelaprecos t ON p.idtabela = t.idtabela
-        LEFT JOIN wshop.pessoas_endereco pe ON pe.idpessoa = p.idpessoa AND pe.stprincipal = true
-        LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
-        WHERE p.idpessoa = $1
-      `, [idpessoa]),
+    // Individual query handling for resilience
+    
+      const health = await getLastHealth();
+      const canJoinPrices = health.databases.mirror?.accessibleTables?.tabelaprecos !== false;
 
-      pool.query(`
-        SELECT d.iddocumento, d.nrdocumento, d.vltotal, d.aldesconto, d.vldesconto,
-               d.usuario, d.dsobservacao,
-               n.dtemissao, n.nrnotafiscal
+      const runQuery = async (p, sql, params, fallback = []) => {
+      try {
+        const result = await p.query(sql, params);
+        return result.rows;
+      } catch (e) {
+        console.warn(`[DASHBOARD] Falha em query: ${e.message}`);
+        return fallback;
+      }
+    };
+
+    const profilePromise = runQuery(pool, `
+      SELECT p.*, ${canJoinPrices ? 't.dstabela' : "'-'"} AS tabela_preco,
+             ${can.pessoas_endereco ? 'pe.nmendereco AS end2, pe.nmbairro AS bairro2, pe.nmcidade AS cidade2,' : '\'-\' AS end2, \'-\' AS bairro2, \'-\' AS cidade2,'}
+             cr.dtdatanasc, cr.sexo, cr.dsnatural
+      FROM wshop.pessoas p
+      ${canJoinPrices ? 'LEFT JOIN wshop.tabelaprecos t ON p.idtabela = t.idtabela' : ''}
+      ${can.pessoas_endereco ? 'LEFT JOIN wshop.pessoas_endereco pe ON pe.idpessoa = p.idpessoa AND pe.stprincipal = true' : ''}
+      LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
+      WHERE p.idpessoa = CAST($1 AS text)
+    `, [idpessoa]);
+
+    let lastPurchasesPromise;
+    if (can.documen && can.documento_nfce) {
+      lastPurchasesPromise = pool.query(`
+        SELECT n.dtemissao, d.vltotal, d.iddocumento
         FROM wshop.documen d
         LEFT JOIN wshop.documento_nfce n ON n.iddocumento = d.iddocumento
-        WHERE d.idpessoa = $1 AND d.tpoperacao = 'V'
+        WHERE d.idpessoa = $1::text AND d.tpoperacao = 'V'
           AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
         ORDER BY n.dtemissao DESC NULLS LAST
         LIMIT 10
-      `, [idpessoa]),
+      `, [idpessoa]);
+    } else {
+      lastPurchasesPromise = Promise.resolve({ rows: [] });
+    }
 
-      pool.query(`
+    let topProductsPromise;
+    if (can.docitem && can.produto && can.documen) {
+      topProductsPromise = pool.query(`
         SELECT pr.nmproduto, pr.cdchamada,
                SUM(di.qtitem) AS qtd_total,
                SUM(di.vlitem) AS valor_total,
@@ -424,14 +477,22 @@ async function getClientDashboard(rawIdPessoa) {
         FROM wshop.docitem di
         JOIN wshop.produto pr ON pr.idproduto = di.idproduto
         JOIN wshop.documen d ON d.iddocumento = di.iddocumento
-        WHERE di.idpessoa = $1 AND d.tpoperacao = 'V'
+        WHERE di.idpessoa = $1::text AND d.tpoperacao = 'V'
           AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
         GROUP BY pr.nmproduto, pr.cdchamada
         ORDER BY valor_total DESC
         LIMIT 10
-      `, [idpessoa]),
+      `, [idpessoa]).then(res => res.rows).catch(async (e) => {
+        console.warn('[DASHBOARD] Falha ao buscar top produtos no ERP (docitem), usando cache:', e.message);
+        return await getTopProductsOffline(idpessoa);
+      });
+    } else {
+      topProductsPromise = Promise.resolve([]);
+    }
 
-      pool.query(`
+    let statsPromise;
+    if (can.documen && can.documento_nfce) {
+      statsPromise = runQuery(pool, `
         SELECT
           COUNT(*) AS total_compras,
           COALESCE(SUM(d.vltotal), 0) AS valor_lifetime,
@@ -443,11 +504,16 @@ async function getClientDashboard(rawIdPessoa) {
           ELSE 0 END AS freq_dias
         FROM wshop.documen d
         LEFT JOIN wshop.documento_nfce n ON n.iddocumento = d.iddocumento
-        WHERE d.idpessoa = $1 AND d.tpoperacao = 'V'
+        WHERE d.idpessoa = $1::text AND d.tpoperacao = 'V'
           AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-      `, [idpessoa]),
+      `, [idpessoa]);
+    } else {
+      statsPromise = Promise.resolve([]);
+    }
 
-      pool.query(`
+    let paymentChannelsPromise;
+    if (can.movcaix && can.tprec) {
+      paymentChannelsPromise = runQuery(pool, `
         SELECT
           CASE
             WHEN t.nmtprecebimento LIKE '%DINHEIRO%' THEN 'Dinheiro'
@@ -464,22 +530,38 @@ async function getClientDashboard(rawIdPessoa) {
         FROM wshop.movcaix m
         JOIN wshop.tprec t ON t.idtprecebimento = m.idtprecebimento
         JOIN wshop.documen d ON d.iddocumento = m.iddocumento
-        WHERE d.idpessoa = $1 AND d.tpoperacao = 'V'
+        WHERE d.idpessoa = $1::text AND d.tpoperacao = 'V'
           AND (m.sttroco IS NULL OR m.sttroco != 'S')
           AND (m.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
         GROUP BY 1 ORDER BY valor DESC
-      `, [idpessoa]),
+      `, [idpessoa]);
+    } else {
+      paymentChannelsPromise = Promise.resolve([]);
+    }
 
-      getClientRanking(idpessoa)
+    const rankingPromise = getClientRanking(idpessoa).catch(() => ({ posicao: '-', abc: '-', total_clientes: 0 }));
+
+    const [profileRows, lastPurchasesRows, topProducts, statsRows, paymentChannels, ranking] = await Promise.all([
+      profilePromise,
+      lastPurchasesPromise,
+      topProductsPromise,
+      statsPromise,
+      paymentChannelsPromise,
+      rankingPromise
     ]);
 
+    const profile = (Array.isArray(profileRows) && profileRows.length > 0) ? profileRows[0] : null;
+    const lastPurchases = Array.isArray(lastPurchasesRows) ? lastPurchasesRows : (lastPurchasesRows?.rows || []);
+    const stats = (Array.isArray(statsRows) && statsRows.length > 0) ? statsRows[0] : {};
+
+
     // Proactive background caching for offline reporting
-    cacheOfflineData(idpessoa, lastPurchases.rows, topProducts.rows).catch(e => 
+    cacheOfflineData(idpessoa, lastPurchases, topProducts).catch(e => 
       console.error('[CACHE] Erro no warm-up do cache background:', e)
     );
 
     const corrections = await ecoPool.query(
-      'SELECT campo, valor_corrigido FROM correcoes_campos WHERE idpessoa = $1',
+      'SELECT campo, valor_corrigido FROM correcoes_campos WHERE idpessoa = CAST($1 AS text)',
       [idpessoa]
     );
 
@@ -487,7 +569,7 @@ async function getClientDashboard(rawIdPessoa) {
       SELECT DISTINCT ON (campo)
              id, campo, status, criado_em, aprovado_em, rejeitado_em, executado_em, erro_msg
       FROM acoes_pendentes
-      WHERE idpessoa = $1
+      WHERE idpessoa = CAST($1 AS text)
         AND tipo_acao = 'ALTERAR_CAMPO'
       ORDER BY campo, criado_em DESC, id DESC
     `, [idpessoa]);
@@ -510,13 +592,13 @@ async function getClientDashboard(rawIdPessoa) {
       };
     });
 
-    const p = profile.rows[0] || {};
+    const p = profile || {};
     Object.keys(FIELD_CONFIG).forEach((field) => {
       if (fixes[field] !== undefined) p[field] = fixes[field];
     });
     await applyTableNameOverlay(p, fixes);
 
-    const s = stats.rows[0] || {};
+    const s = stats || {};
     const priorityData = {
       idpessoa: idpessoa,
       abc: ranking.abc || 'C',
@@ -533,10 +615,10 @@ async function getClientDashboard(rawIdPessoa) {
 
     return {
       profile: p,
-      lastPurchases: lastPurchases.rows,
-      topProducts: topProducts.rows,
+      lastPurchases: lastPurchases,
+      topProducts: topProducts,
       stats: s,
-      paymentChannels: paymentChannels.rows,
+      paymentChannels: paymentChannels,
       ranking,
       corrections: fixes,
       actionStatus,
@@ -587,47 +669,53 @@ async function getRecommendations(rawIdPessoa) {
 
     // 2. Fetch Heuristic Recommendations (Optimized Collaborative Filtering)
     // We limit to recent purchases and highly similar groups to avoid full scans.
-    const heuristicResult = await pool.query(`
-      WITH recent_docs AS (
-        SELECT iddocumento FROM wshop.documen 
-        WHERE idpessoa = $1 AND tpoperacao = 'V'
-          AND (stdocumentocancelado IS NULL OR stdocumentocancelado != 'S')
-        ORDER BY dtemissao DESC LIMIT 5
-      ),
-      my_products AS (
-        SELECT DISTINCT di.idproduto, pr.idgrupo
+    let heuristicResults = [];
+    try {
+      const heuristicResult = await pool.query(`
+        WITH recent_docs AS (
+          SELECT iddocumento FROM wshop.documen 
+          WHERE idpessoa = CAST($1 AS text) AND tpoperacao = 'V'
+            AND (stdocumentocancelado IS NULL OR stdocumentocancelado != 'S')
+          ORDER BY dtemissao DESC LIMIT 5
+        ),
+        my_products AS (
+          SELECT DISTINCT di.idproduto, pr.idgrupo
+          FROM wshop.docitem di
+          JOIN recent_docs rd ON rd.iddocumento = di.iddocumento
+          JOIN wshop.produto pr ON pr.idproduto = di.idproduto
+        ),
+        similar_customers AS (
+          SELECT DISTINCT d2.idpessoa
+          FROM wshop.docitem di2
+          JOIN wshop.documen d2 ON d2.iddocumento = di2.iddocumento
+          WHERE di2.idproduto IN (SELECT idproduto FROM my_products)
+            AND d2.idpessoa != CAST($1 AS text)
+          LIMIT 20
+        )
+        SELECT pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo,
+               COUNT(DISTINCT d.idpessoa) AS clientes_similares,
+               SUM(di.qtitem) AS qtd_vendida
         FROM wshop.docitem di
-        JOIN recent_docs rd ON rd.iddocumento = di.iddocumento
         JOIN wshop.produto pr ON pr.idproduto = di.idproduto
-      ),
-      similar_customers AS (
-        SELECT DISTINCT d2.idpessoa
-        FROM wshop.docitem di2
-        JOIN wshop.documen d2 ON d2.iddocumento = di2.iddocumento
-        WHERE di2.idproduto IN (SELECT idproduto FROM my_products)
-          AND d2.idpessoa != $1
-        LIMIT 20
-      )
-      SELECT pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo,
-             COUNT(DISTINCT d.idpessoa) AS clientes_similares,
-             SUM(di.qtitem) AS qtd_vendida
-      FROM wshop.docitem di
-      JOIN wshop.produto pr ON pr.idproduto = di.idproduto
-      LEFT JOIN wshop.grupo g ON g.idgrupo = pr.idgrupo
-      JOIN wshop.documen d ON d.iddocumento = di.iddocumento
-      WHERE d.idpessoa IN (SELECT idpessoa FROM similar_customers)
-        AND di.idproduto NOT IN (SELECT idproduto FROM my_products)
-        AND pr.idgrupo IN (SELECT idgrupo FROM my_products) -- Focus on same categories
-      GROUP BY pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo
-      ORDER BY clientes_similares DESC, qtd_vendida DESC
-      LIMIT 10
-    `, [idpessoa]);
+        LEFT JOIN wshop.grupo g ON g.idgrupo = pr.idgrupo
+        JOIN wshop.documen d ON d.iddocumento = di.iddocumento
+        WHERE d.idpessoa IN (SELECT idpessoa FROM similar_customers)
+          AND di.idproduto NOT IN (SELECT idproduto FROM my_products)
+          AND pr.idgrupo IN (SELECT idgrupo FROM my_products) -- Focus on same categories
+        GROUP BY pr.idproduto, pr.cdchamada, pr.nmproduto, g.nmgrupo
+        ORDER BY clientes_similares DESC, qtd_vendida DESC
+        LIMIT 10
+      `, [idpessoa]);
 
-    const heuristicResults = heuristicResult.rows.map(row => ({
-      ...row,
-      source: 'HEURISTIC',
-      reason: 'COMPRADO_POR_CLIENTES_SIMILARES'
-    }));
+      heuristicResults = heuristicResult.rows.map(row => ({
+        ...row,
+        source: 'HEURISTIC',
+        reason: 'COMPRADO_POR_CLIENTES_SIMILARES'
+      }));
+    } catch (e) {
+      console.warn('[CLIENT] Falha ao buscar recomendacoes heuristicas (docitem):', e.message);
+      // Fallback: heuristicResults remains empty, we continue with ML only
+    }
 
     // 3. Merge Results (Prioritize ML, avoid duplicates)
     const seen = new Set(mlResults.map(r => r.idproduto));

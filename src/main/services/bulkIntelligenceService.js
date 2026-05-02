@@ -8,29 +8,99 @@ class BulkIntelligenceService {
     console.log('[BULK INTEL] Iniciando varredura de engajamento...');
     let processed = 0;
     try {
-      // 1. Fetch active clients and their basic stats from ERP
-      const clientsRes = await pool.query(`
-        SELECT 
-          p.idpessoa, 
-          p.dtultimacompra, 
-          cr.dtdatanasc,
-          COALESCE(f.freq_dias, 0) as freq_dias
-        FROM wshop.pessoas p
-        LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
-        LEFT JOIN LATERAL (
-          SELECT 
-            CASE WHEN COUNT(*) > 1 THEN
-              EXTRACT(DAY FROM (MAX(n.dtemissao) - MIN(n.dtemissao))) / (COUNT(*) - 1)
-            ELSE 0 END AS freq_dias
-          FROM wshop.documen d
-          LEFT JOIN wshop.documento_nfce n ON n.iddocumento = d.iddocumento
-          WHERE d.idpessoa = p.idpessoa AND d.tpoperacao = 'V'
-            AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-        ) f ON TRUE
-        WHERE p.stativo = 'S'
-      `);
-      
-      const clients = clientsRes.rows;
+      // 0. Pre-calculate Ranking Cache
+      console.log('[BULK INTEL] Atualizando cache de ranking...');
+      try {
+        const rankingData = await pool.query(`
+          WITH totais AS (
+            SELECT d.idpessoa, SUM(d.vltotal) AS total
+            FROM wshop.documen d
+            WHERE d.tpoperacao = 'V'
+              AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
+            GROUP BY d.idpessoa
+          ),
+          ranked AS (
+            SELECT idpessoa, total,
+                   ROW_NUMBER() OVER (ORDER BY total DESC) AS posicao,
+                   COUNT(*) OVER () AS total_clientes
+          FROM totais WHERE total > 0
+        )
+        SELECT idpessoa, posicao, total_clientes, total,
+               CASE
+                 WHEN posicao <= total_clientes * 0.2 THEN 'A'
+                 WHEN posicao <= total_clientes * 0.5 THEN 'B'
+                 ELSE 'C'
+               END AS abc
+        FROM ranked
+        `);
+
+        if (rankingData.rows.length > 0) {
+          // Insert into ranking_cache in batches
+          const rBatchSize = 100;
+          for (let i = 0; i < rankingData.rows.length; i += rBatchSize) {
+            const batch = rankingData.rows.slice(i, i + rBatchSize);
+            const values = batch.map((_, idx) => `($${idx * 5 + 1}::text, $${idx * 5 + 2}::integer, $${idx * 5 + 3}::integer, $${idx * 5 + 4}::numeric, $${idx * 5 + 5}::text, NOW())`).join(', ');
+            const flatParams = batch.flatMap(r => [
+              String(r.idpessoa), 
+              parseInt(r.posicao), 
+              parseInt(r.total_clientes), 
+              parseFloat(r.total), 
+              String(r.abc)
+            ]);
+
+            await ecoPool.query(`
+              INSERT INTO ranking_cache (idpessoa, posicao, total_clientes, total_compras, abc, calculado_em)
+              VALUES ${values}
+              ON CONFLICT (idpessoa) DO UPDATE SET
+                posicao = EXCLUDED.posicao,
+                total_clientes = EXCLUDED.total_clientes,
+                total_compras = EXCLUDED.total_compras,
+                abc = EXCLUDED.abc,
+                calculado_em = NOW()
+            `, flatParams);
+          }
+        }
+      } catch (rankErr) {
+        console.warn('[BULK INTEL] Falha ao atualizar ranking (provavelmente falta permissão):', rankErr.message);
+      }
+
+      // 1. Fetch active clients
+      console.log('[BULK INTEL] Buscando lista de clientes ativos...');
+      let clients = [];
+      try {
+        const clientsRes = await pool.query(`
+          WITH stats AS (
+            SELECT
+              d.idpessoa,
+              CASE WHEN COUNT(*) > 1 THEN
+                EXTRACT(DAY FROM (MAX(d.dtemissao) - MIN(d.dtemissao))) / (COUNT(*) - 1)
+              ELSE 0 END AS freq_dias
+            FROM wshop.documen d
+            WHERE d.tpoperacao = 'V'
+              AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
+            GROUP BY d.idpessoa
+          )
+          SELECT
+            p.idpessoa,
+            p.dtultimacompra,
+            cr.dtdatanasc,
+            COALESCE(s.freq_dias, 0) as freq_dias
+          FROM wshop.pessoas p
+          LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
+          LEFT JOIN stats s ON s.idpessoa = p.idpessoa
+          WHERE p.stativo = 'S'
+        `);
+        clients = clientsRes.rows;
+      } catch (clientErr) {
+        console.warn('[BULK INTEL] Falha ao buscar estatísticas complexas, tentando lista simples...');
+        const simpleRes = await pool.query(`
+          SELECT p.idpessoa, p.dtultimacompra, cr.dtdatanasc, 0 as freq_dias
+          FROM wshop.pessoas p
+          LEFT JOIN wshop.crediar cr ON cr.idpessoa = p.idpessoa
+          WHERE p.stativo = 'S'
+        `);
+        clients = simpleRes.rows;
+      }
       if (!clients.length) return { processed: 0 };
 
       // 2. Fetch all rankings from ecosystem
@@ -38,11 +108,43 @@ class BulkIntelligenceService {
       const rankings = {};
       rankingRes.rows.forEach(r => { rankings[r.idpessoa] = r.abc; });
 
-      // Process in batches to avoid overwhelming the connection/memory
-      const batchSize = 500;
+      // Process in batches
+      const batchSize = 100;
       for (let i = 0; i < clients.length; i += batchSize) {
         const batch = clients.slice(i, i + batchSize);
+        const batchIds = batch.map(c => String(c.idpessoa));
         const updates = [];
+
+        // Pre-fetch all ML, engagement, and profile data for the batch
+        const [churnRes, sentimentRes, affinityRes, engagementRes, profileRes] = await Promise.all([
+          ecoPool.query('SELECT idpessoa, risk_score, confidence FROM ml_churn_risk WHERE idpessoa = ANY($1)', [batchIds]),
+          ecoPool.query('SELECT idpessoa, sentiment_score, sentiment_label FROM ml_client_sentiment WHERE idpessoa = ANY($1)', [batchIds]),
+          ecoPool.query(`
+            SELECT idpessoa, idproduto, affinity_score, reason_code
+            FROM (
+              SELECT idpessoa, idproduto, affinity_score, reason_code,
+                     ROW_NUMBER() OVER (PARTITION BY idpessoa ORDER BY affinity_score DESC) as rn
+              FROM ml_product_affinity
+              WHERE idpessoa = ANY($1)
+            ) t WHERE rn = 1
+          `, [batchIds]),
+          ecoPool.query(`
+            SELECT 
+              idpessoa,
+              COUNT(*) FILTER (WHERE direcao = 'INBOUND') as inbound_count,
+              COUNT(*) FILTER (WHERE direcao = 'OUTBOUND') as outbound_count
+            FROM omnichannel_mensagens
+            WHERE idpessoa = ANY($1) AND criado_em > CURRENT_TIMESTAMP - INTERVAL '7 days'
+            GROUP BY idpessoa
+          `, [batchIds]),
+          ecoPool.query('SELECT * FROM ml_client_profiles WHERE idpessoa = ANY($1)', [batchIds])
+        ]);
+
+        const batchChurn = {}; churnRes.rows.forEach(r => batchChurn[r.idpessoa] = r);
+        const batchSentiment = {}; sentimentRes.rows.forEach(r => batchSentiment[r.idpessoa] = r);
+        const batchAffinity = {}; affinityRes.rows.forEach(r => batchAffinity[r.idpessoa] = [r]);
+        const batchEngagement = {}; engagementRes.rows.forEach(r => batchEngagement[r.idpessoa] = r);
+        const batchProfiles = {}; profileRes.rows.forEach(r => batchProfiles[r.idpessoa] = r);
 
         for (const client of batch) {
           const priorityData = {
@@ -53,36 +155,29 @@ class BulkIntelligenceService {
             dias_sem_compra: daysSince(client.dtultimacompra),
             origem: 'SISTEMA',
             tipo_acao: 'SWEEP',
-            criado_em: new Date()
+            criado_em: new Date(),
+            mlRisk: batchChurn[client.idpessoa] || null,
+            sentiment: batchSentiment[client.idpessoa] || null,
+            productAffinity: batchAffinity[client.idpessoa] || [],
+            waEngagement: batchEngagement[client.idpessoa] || { inbound_count: 0, outbound_count: 0, last_interaction: null },
+            mlProfile: batchProfiles[client.idpessoa] || null
           };
 
           const score = await intel.calculatePriority(priorityData);
           updates.push({ idpessoa: client.idpessoa, score });
         }
 
-        // Upsert into clientes_enriquecidos
         if (updates.length > 0) {
-          try {
-            const values = updates.map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2}, NOW())`).join(', ');
-            const flatParams = [];
-            updates.forEach(u => {
-              // Ensure no undefined values enter the params
-              flatParams.push(u.idpessoa ?? '0');
-              flatParams.push(u.score ?? 0);
-            });
+          const values = updates.map((_, idx) => `($${idx * 2 + 1}::text, $${idx * 2 + 2}::integer, NOW())`).join(', ');
+          const flatParams = updates.flatMap(u => [String(u.idpessoa), parseInt(u.score)]);
 
-            await ecoPool.query(`
-              INSERT INTO clientes_enriquecidos (idpessoa, score_engajamento, atualizado_em)
-              VALUES ${values}
-              ON CONFLICT (idpessoa) DO UPDATE SET 
-                score_engajamento = EXCLUDED.score_engajamento,
-                atualizado_em = NOW()
-            `, flatParams);
-          } catch (batchError) {
-            const debugParams = updates.flatMap(u => [u.idpessoa, u.score]);
-            console.error(`[BULK INTEL] Falha no lote: updates=${updates.length}, flatParams=${debugParams.length}. Erro: ${batchError.message}`);
-            throw batchError;
-          }
+          await ecoPool.query(`
+            INSERT INTO clientes_enriquecidos (idpessoa, score_engajamento, atualizado_em)
+            VALUES ${values}
+            ON CONFLICT (idpessoa) DO UPDATE SET
+              score_engajamento = EXCLUDED.score_engajamento,
+              atualizado_em = NOW()
+          `, flatParams);
         }
 
         processed += batch.length;

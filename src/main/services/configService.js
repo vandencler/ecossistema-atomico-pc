@@ -150,7 +150,7 @@ function validateConfig(config) {
     if (config.settings.autoSync !== undefined && typeof config.settings.autoSync !== 'boolean') {
       throw new Error('settings.autoSync invalido');
     }
-    for (const numericKey of ['cacheTTL', 'syncInterval']) {
+    for (const numericKey of ['cacheTTL', 'syncInterval', 'userId']) {
       if (config.settings[numericKey] !== undefined) {
         const value = Number(config.settings[numericKey]);
         if (!Number.isFinite(value) || value < 1 || value > 10080) throw new Error(`settings.${numericKey} invalido`);

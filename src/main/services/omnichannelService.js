@@ -1,4 +1,4 @@
-const { pool, ecoPool } = require('../db');
+﻿const { pool, ecoPool } = require('../db');
 const { logEvent, logError } = require('./logService');
 const { trackEvent } = require('./telemetryService');
 const { getConfigValue } = require('./configService');
@@ -16,7 +16,7 @@ class OmnichannelService {
   sanitizePhone(raw) {
     if (!raw) return null;
     let digits = String(raw).replace(/\D/g, '');
-    
+
     // Remove leading zero from area code (DDD) if present (e.g., 021... -> 21...)
     if (digits.startsWith('0') && digits.length >= 11) {
       digits = digits.substring(1);
@@ -27,7 +27,7 @@ class OmnichannelService {
     } else if (digits.length >= 12 && digits.length <= 13 && digits.startsWith('55')) {
       return digits;
     }
-    
+
     return null;
   }
 
@@ -37,11 +37,11 @@ class OmnichannelService {
   async _getClientPhone(idpessoa) {
     try {
       const res = await pool.query(`
-        SELECT campostelwhatsapp, nrtelefone 
-        FROM wshop.pessoas 
+        SELECT campostelwhatsapp, nrtelefone
+        FROM wshop.pessoas
         WHERE idpessoa = $1
       `, [idpessoa]);
-      
+
       const p = res.rows[0];
       if (!p) return null;
 
@@ -59,23 +59,23 @@ class OmnichannelService {
   }
 
   /**
-   * Internal method to record an omnichannel interaction in the database.
+   * Internal method to record an omnichannel interaction in the database.      
    */
   async _recordInteraction(idpessoa, direcao, conteudo, status, external_id = null) {
     try {
-      // USANDO ecoPool para o banco ECOSSISTEMA_ATOMICO (Escrita permitida)
+      // USANDO ecoPool para o banco ECOSSISTEMA_ATOMICO (Escrita permitida)    
       await ecoPool.query(`
         INSERT INTO omnichannel_mensagens (idpessoa, direcao, conteudo, status, external_id)
         VALUES ($1, $2, $3, $4, $5)
       `, [idpessoa, direcao, conteudo, status, external_id]);
-      
-      // Update last interaction and engagement score in enriched client data
+
+      // Update last interaction and engagement score in enriched client data   
       const engagementBoost = direcao === 'INBOUND' ? 5.00 : 0.00;
 
       await ecoPool.query(`
         INSERT INTO clientes_enriquecidos (idpessoa, ultima_interacao, canal_preferido, score_engajamento)
         VALUES ($1, CURRENT_TIMESTAMP, 'WHATSAPP', $2)
-        ON CONFLICT (idpessoa) DO UPDATE SET 
+        ON CONFLICT (idpessoa) DO UPDATE SET
           ultima_interacao = EXCLUDED.ultima_interacao,
           canal_preferido = EXCLUDED.canal_preferido,
           score_engajamento = LEAST(100.00, clientes_enriquecidos.score_engajamento + EXCLUDED.score_engajamento)
@@ -109,7 +109,7 @@ class OmnichannelService {
 
     try {
       const apiUrl = await getConfigValue('whatsapp_api_url', '');
-      // const apiToken = await getConfigValue('whatsapp_api_token', '');
+      // const apiToken = await getConfigValue('whatsapp_api_token', '');       
 
       // Simulate API Call Payload
       const payload = {
@@ -119,13 +119,13 @@ class OmnichannelService {
       };
 
       if (templateId) {
-        payload.template = { name: templateId, language: { code: 'pt_BR' } };
+        payload.template = { name: templateId, language: { code: 'pt_BR' } };   
       } else {
         payload.text = { body: message };
       }
 
       console.log(`[OMNI] Mocking WhatsApp Business API Dispatch to ${phone} (URL: ${apiUrl}): ${message}`);
-      
+
       // Real implementation would use fetch(apiUrl, { headers: { 'Authorization': `Bearer ${apiToken}` ... } })
       const mockExternalId = `wa_msg_${Date.now()}`;
 
@@ -146,21 +146,55 @@ class OmnichannelService {
    */
   async ingestInboundMessage(idpessoa, content, externalId) {
     console.log(`[OMNI] Ingesting Inbound Message from ${idpessoa}: ${content}`);
-    
+
     await this._recordInteraction(idpessoa, 'INBOUND', content, 'RECEIVED', externalId);
     await logEvent('OMNI_WA_RECEIVED', idpessoa, 'Mensagem recebida via WhatsApp.');
     await trackEvent('whatsapp_api_inbound', idpessoa, { length: content.length });
+
+    // Try to process as NPS response (Dynamic require to avoid circular dependency)
+    try {
+      const npsService = require('./npsService');
+      await npsService.processResponse(idpessoa, content);
+      
+      const sentimentService = require('./sentimentService');
+      await sentimentService.analyzeMessage(idpessoa, content);
+    } catch (e) {
+      // Quietly fail if services are not yet fully initialized or error occurs
+      console.warn('[OMNI] Could not process NPS or Sentiment response:', e.message);
+    }
 
     return { ok: true };
   }
 
 
   /**
-   * Domain Logic: Notify client that their registration update was approved.
+   * Domain Logic: Notify client that their registration update was approved.   
    */
   async notifySavApproval(idpessoa, campo, overridePhone = null) {
     const message = `Ola! Seu cadastro no Emporio Natural foi atualizado com sucesso (Campo: ${campo}). Obrigado por comprar conosco!`;
     return this.sendWhatsAppMessage(idpessoa, message, 'sav_update_approved', overridePhone);
+  }
+
+  /**
+   * Domain Logic: Send a welcome message to a new rep or client.
+   * Based on Phase 6 Onboarding Strategy.
+   */
+  async sendWelcomeMessage(idpessoa, overridePhone = null) {
+    const welcomeMsg = await getConfigValue('omni_welcome_message', 'Bem-vindo ao EAV!');
+    const guideLink = await getConfigValue('omni_guide_url', 'https://eav.atomico.pc/docs/faq');
+    const fullMessage = `${welcomeMsg}\n\nGuia Rápido: ${guideLink}`;
+
+    console.log(`[OMNI] Sending Phase 6 Welcome Message to ${idpessoa}`);
+    return this.sendWhatsAppMessage(idpessoa, fullMessage, null, overridePhone);
+  }
+
+  /**
+   * Domain Logic: Send NPS Survey message (scheduled for 48h after onboarding).
+   * Based on Phase 6 Growth Strategy.
+   */
+  async sendNpsSurvey(idpessoa, overridePhone = null) {
+    const surveyMsg = await getConfigValue('omni_nps_message', 'Olá! Você está usando o EAV há 48h. Em uma escala de 0 a 10, o quanto você recomendaria o sistema para um colega?');
+    return this.sendWhatsAppMessage(idpessoa, surveyMsg, null, overridePhone);  
   }
 }
 

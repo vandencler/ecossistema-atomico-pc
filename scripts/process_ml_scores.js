@@ -3,14 +3,19 @@ const path = require('path');
 const { ecoPool } = require('../src/main/db');
 
 /**
- * EAV Machine Learning Processor (Lightweight Statistical Model)
- * This script simulates an external Data Science pipeline.
- * It reads the ETL CSVs, applies statistical scoring, and updates the EAV database.
+ * EAV Machine Learning Processor (Simulated Supervised Model)
+ * This script implements a weighted scoring system that mimics a Logistic Regression model.
+ * It uses expanded features (RFM + Diversity + Basket Size) to improve churn precision.
  */
 
 const outputDir = path.join(process.cwd(), 'ml_data');
 const churnFile = path.join(outputDir, 'ml_churn_training.csv');
 const affinityFile = path.join(outputDir, 'ml_affinity_training.csv');
+
+// Sigmoid function for probability mapping
+function sigmoid(z) {
+  return 1 / (1 + Math.exp(-z));
+}
 
 async function processChurnScores() {
   if (!fs.existsSync(churnFile)) {
@@ -18,60 +23,64 @@ async function processChurnScores() {
     return;
   }
 
-  console.log('[ML-ENGINE] Processando modelo de Evasão (Churn)...');
+  console.log('[ML-ENGINE] Processando modelo de Evasão (Churn v1.2-supervised)...');
   const data = fs.readFileSync(churnFile, 'utf8').split('\n').filter(Boolean).slice(1);
   
-  const client = await ecoPool.connect();
+  const client = await ecoPool.raw.connect();
   try {
     await client.query('BEGIN');
 
     for (const row of data) {
-      const [idpessoa, recency, frequency] = row.split(',');
-      if (!idpessoa || !recency) continue;
+      const [idpessoa, recency, frequency, monetary, tenure, avg_basket, group_div] = row.split(',');
+      if (!idpessoa || recency === undefined) continue;
 
-      // Statistical Heuristic: High recency + High frequency drop-off = High Risk
-      const rec = parseInt(recency, 10);
-      const freq = parseInt(frequency, 10);
+      const rec = parseFloat(recency);
+      const freq = parseFloat(frequency || 0);
+      const val = parseFloat(monetary || 0);
+      const ten = parseFloat(tenure || 0);
+      const basket = parseFloat(avg_basket || 0);
+      const div = parseFloat(group_div || 0);
       
-      let riskScore = 0.0;
+      /**
+       * SIMULATED LOGISTIC REGRESSION WEIGHTS
+       * These weights are "learned" (estimated) to balance precision and recall.
+       */
+      let z = -2.5; // Bias (Intercept)
+      
+      // Feature Weighting
+      z += rec * 0.04;        // Recency is the strongest positive predictor of churn
+      z -= freq * 0.15;       // Frequency reduces churn risk
+      z -= Math.log10(val + 1) * 0.2; // Higher LTV reduces risk
+      z -= (div > 3 ? 0.8 : 0); // Category diversity is a loyalty indicator
+      z -= (ten > 365 ? 0.5 : 0); // Long-term tenure reduces risk
+      z += (basket < 2 && freq > 5 ? 0.3 : 0); // Small baskets in active users might indicate drift
+      
+      const probability = sigmoid(z);
+      const riskScore = probability * 100;
+      
+      // Confidence mapping based on data density
       let confidence = 50.0;
-
-      if (rec > 180) {
-        riskScore = 85.0; // Very likely churned
-        confidence = 90.0;
-      } else if (rec > 90) {
-        riskScore = 65.0; // At risk
-        confidence = 75.0;
-      } else if (rec > 30) {
-        riskScore = 30.0; // Drifting
-        confidence = 60.0;
-      } else {
-        riskScore = 5.0; // Active
-        confidence = 80.0;
-      }
-
-      // Modifier based on historical frequency
-      if (freq > 10 && rec > 60) {
-        riskScore = Math.min(100, riskScore + 20); // Sudden drop-off from VIP
-        confidence = Math.min(100, confidence + 10);
-      }
+      if (rec > 180 || rec < 15) confidence = 90.0; // Extreme cases are more certain
+      else if (freq > 20) confidence = 85.0; // High data volume increases certainty
+      else confidence = 65.0 + (Math.min(freq, 10) * 1.5);
 
       const nextPurchaseDate = new Date();
-      nextPurchaseDate.setDate(nextPurchaseDate.getDate() + Math.max(1, 30 - (freq || 1)));
+      nextPurchaseDate.setDate(nextPurchaseDate.getDate() + Math.max(1, Math.round(30 / (freq / 2 || 1))));
 
       await client.query(`
         INSERT INTO ml_churn_risk (idpessoa, risk_score, confidence, next_purchase_estimate, model_version)
-        VALUES ($1, $2, $3, $4, 'v1.0-stat')
+        VALUES ($1, $2, $3, $4, 'v1.2-supervised-sim')
         ON CONFLICT (idpessoa) DO UPDATE SET
           risk_score = EXCLUDED.risk_score,
           confidence = EXCLUDED.confidence,
           next_purchase_estimate = EXCLUDED.next_purchase_estimate,
+          model_version = EXCLUDED.model_version,
           calculado_em = CURRENT_TIMESTAMP
-      `, [idpessoa, riskScore, confidence, nextPurchaseDate.toISOString().split('T')[0]]);
+      `, [idpessoa, riskScore.toFixed(2), confidence.toFixed(2), nextPurchaseDate.toISOString().split('T')[0]]);
     }
 
     await client.query('COMMIT');
-    console.log(`[ML-ENGINE] Ingestao de Churn concluida para ${data.length} clientes.`);
+    console.log(`[ML-ENGINE] Ingestao de Churn concluida para ${data.length} clientes (v1.2).`);
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('[ML-ENGINE] Erro no processamento de Churn:', e.message);
@@ -86,10 +95,10 @@ async function processAffinityScores() {
     return;
   }
 
-  console.log('[ML-ENGINE] Processando modelo de Afinidade (Next Best Action)...');
+  console.log('[ML-ENGINE] Processando modelo de Afinidade (Upsell/Volume)...');
   const data = fs.readFileSync(affinityFile, 'utf8').split('\n').filter(Boolean).slice(1);
   
-  const client = await ecoPool.connect();
+  const client = await ecoPool.raw.connect();
   try {
     await client.query('BEGIN');
 
@@ -97,12 +106,17 @@ async function processAffinityScores() {
       const [idpessoa, idproduto, qtd_total] = row.split(',');
       if (!idpessoa || !idproduto) continue;
 
-      // Simplified Statistical Model for Affinity
-      // In a real pipeline, this would use collaborative filtering.
-      // Here, we convert historical volume into an affinity score.
-      const qty = parseInt(qtd_total, 10);
-      const affinityScore = Math.min(100, (qty * 5.5)); 
-      const reasonCode = qty > 10 ? 'HIGH_HISTORICAL_VOLUME' : 'BOUGHT_PREVIOUSLY';
+      const qty = parseFloat(qtd_total || 0);
+      let affinityScore = Math.min(100, (qty * 7.5)); 
+      let reasonCode = 'BOUGHT_PREVIOUSLY';
+      
+      if (qty > 20) {
+        reasonCode = 'CORE_PRODUCT';
+        affinityScore = Math.min(100, affinityScore + 15);
+      } else if (qty > 10) {
+        reasonCode = 'HIGH_HISTORICAL_VOLUME';
+        affinityScore = Math.min(100, affinityScore + 5);
+      }
 
       await client.query(`
         INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code)
@@ -125,7 +139,7 @@ async function processAffinityScores() {
 }
 
 async function run() {
-  console.log('=== Iniciando ML Processing Pipeline ===');
+  console.log('=== Iniciando ML Processing Pipeline v1.2 ===');
   await processChurnScores();
   await processAffinityScores();
   console.log('=== Pipeline Concluido ===');

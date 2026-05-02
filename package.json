@@ -11,7 +11,14 @@
     "build": "electron-builder --win",
     "pack": "electron-builder --dir",
     "ml:extract": "node scripts/export_ml_data.js",
-    "ml:process": "node scripts/process_ml_scores.js"
+    "ml:process": "node scripts/process_ml_scores.js",
+    "ml:cross-sell": "node scripts/train_cross_sell.js",
+    "ml:sentiment": "node scripts/analyze_sentiment.js",
+    "ml:trending": "node scripts/analyze_trending.js",
+    "ml:retention": "node scripts/generate_retention_hooks.js",
+    "ml:evaluate": "node scripts/evaluate_models.js",
+    "ml:report": "node scripts/generate_sentiment_report.js",
+    "ml:drift": "node scripts/detect_model_drift.js"
   },
   "author": "Emporio Natural",
   "build": {

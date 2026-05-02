@@ -40,7 +40,7 @@ async function request(method, path, body = null) {
 
 async function run() {
   try {
-    const issueId = "7458b1dc-3781-462e-b23d-7291bad0407f";
+    const issueId = '7458b1dc-3781-462e-b23d-7291bad0407f';
     await request('PATCH', `/api/issues/${issueId}`, { status: 'done', comment: 'Investigação concluída. Identifiquei que as consultas de busca estavam ignorando os índices Trigram devido a um descasamento entre o uso de `LOWER()` no código e a definição dos índices no banco espelho (que estavam na coluna bruta). Refatorei o `clientService.js` para alinhar as consultas aos índices, resultando em uma melhoria de performance de ~11x (92ms -> 8ms). Também otimizei a consulta de recomendações heurísticas, reduzindo significativamente o escopo de busca de clientes similares.' });
     console.log('EAV-83 closed');
   } catch(e) {

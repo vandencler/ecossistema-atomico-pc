@@ -17,8 +17,8 @@ async function run() {
       );
     `);
     
-    await ecoPool.query(`CREATE INDEX IF NOT EXISTS idx_omni_mensagens_pessoa ON omnichannel_mensagens(idpessoa);`);
-    await ecoPool.query(`CREATE INDEX IF NOT EXISTS idx_omni_mensagens_criado ON omnichannel_mensagens(criado_em);`);
+    await ecoPool.query('CREATE INDEX IF NOT EXISTS idx_omni_mensagens_pessoa ON omnichannel_mensagens(idpessoa);');
+    await ecoPool.query('CREATE INDEX IF NOT EXISTS idx_omni_mensagens_criado ON omnichannel_mensagens(criado_em);');
 
     console.log('✅ omnichannel_mensagens table verified/created.');
     

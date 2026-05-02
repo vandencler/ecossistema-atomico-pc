@@ -9,32 +9,42 @@ async function exportMlData() {
 
   const churnFile = path.join(outputDir, 'ml_churn_training.csv');
   const affinityFile = path.join(outputDir, 'ml_affinity_training.csv');
+  const transactionFile = path.join(outputDir, 'ml_transactions_basket.csv');
 
   try {
-    // 1. Export Data for Churn Model (Recency, Frequency, Monetary - RFM)
-    console.log('[ML-ETL] Extraindo base de clientes (RFM)...');
+    // 1. Export Data for Churn Model (RFM + Expanded Features)
+    console.log('[ML-ETL] Extraindo base de clientes (RFM+)...');
     const rfmQuery = await pool.query(`
-      SELECT 
-        p.idpessoa,
-        EXTRACT(DAY FROM NOW() - MAX(d.dtemissao)) as recency_days,
-        COUNT(d.iddocumento) as frequency,
-        COALESCE(SUM(d.vltotal), 0) as monetary_value,
-        MIN(d.dtemissao) as first_purchase_date
-      FROM wshop.pessoas p
-      LEFT JOIN wshop.documen d ON p.idpessoa = d.idpessoa
-        AND d.tpoperacao = 'V' AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-      LEFT JOIN wshop.documento_nfce n ON d.iddocumento = n.iddocumento
-      GROUP BY p.idpessoa
+      WITH client_stats AS (
+        SELECT 
+          p.idpessoa,
+          EXTRACT(DAY FROM NOW() - MAX(d.dtemissao)) as recency_days,
+          COUNT(DISTINCT d.iddocumento) as frequency,
+          COALESCE(SUM(d.vltotal), 0) as monetary_value,
+          EXTRACT(DAY FROM NOW() - MIN(d.dtemissao)) as tenure_days,
+          AVG(i.qt_items) as avg_basket_size,
+          COUNT(DISTINCT pr.idgrupo) as group_diversity
+        FROM wshop.pessoas p
+        LEFT JOIN wshop.documen d ON p.idpessoa = d.idpessoa
+          AND d.tpoperacao = 'V' AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
+        LEFT JOIN (
+          SELECT iddocumento, SUM(qtitem) as qt_items FROM wshop.docitem GROUP BY iddocumento
+        ) i ON d.iddocumento = i.iddocumento
+        LEFT JOIN wshop.docitem di ON d.iddocumento = di.iddocumento
+        LEFT JOIN wshop.produto pr ON di.idproduto = pr.idproduto
+        GROUP BY p.idpessoa
+      )
+      SELECT * FROM client_stats
     `);
 
-    let churnCsv = 'idpessoa,recency_days,frequency,monetary_value,first_purchase_date\n';
+    let churnCsv = 'idpessoa,recency_days,frequency,monetary_value,tenure_days,avg_basket_size,group_diversity\n';
     rfmQuery.rows.forEach(r => {
-      churnCsv += `${r.idpessoa},${r.recency_days},${r.frequency},${r.monetary_value},${r.first_purchase_date}\n`;
+      churnCsv += `${r.idpessoa},${r.recency_days || 999},${r.frequency},${r.monetary_value},${r.tenure_days || 0},${r.avg_basket_size || 0},${r.group_diversity}\n`;
     });
     fs.writeFileSync(churnFile, churnCsv);
-    console.log(`[ML-ETL] Salvo RFM de ${rfmQuery.rowCount} clientes em ${churnFile}`);
+    console.log(`[ML-ETL] Salvo RFM+ de ${rfmQuery.rowCount} clientes em ${churnFile}`);
 
-    // 2. Export Data for Affinity Model (Market Basket Analysis)
+    // 2. Export Data for Affinity Model (Customer-Product totals)
     console.log('[ML-ETL] Extraindo base de itens (Basket)...');
     const basketQuery = await pool.query(`
       SELECT 
@@ -55,12 +65,35 @@ async function exportMlData() {
     fs.writeFileSync(affinityFile, affinityCsv);
     console.log(`[ML-ETL] Salvo ${basketQuery.rowCount} relacionamentos cliente-produto em ${affinityFile}`);
 
+    // 3. Export Transaction Data for Market Basket Analysis (Recent Transactions)
+    console.log('[ML-ETL] Extraindo base de transacoes (Basket Analysis)...');
+    const transQuery = await pool.query(`
+      SELECT 
+        iddocumento,
+        idproduto,
+        dtemissao
+      FROM wshop.docitem
+      JOIN wshop.documen USING (iddocumento)
+      WHERE wshop.documen.tpoperacao = 'V' AND (wshop.documen.stdocumentocancelado IS NULL OR wshop.documen.stdocumentocancelado != 'S')
+      AND dtemissao > CURRENT_TIMESTAMP - INTERVAL '180 days'
+    `);
+
+    let transCsv = 'iddocumento,idproduto,dtemissao\n';
+    transQuery.rows.forEach(r => {
+      transCsv += `${r.iddocumento},${r.idproduto},${r.dtemissao ? r.dtemissao.toISOString() : ''}\n`;
+    });
+    fs.writeFileSync(transactionFile, transCsv);
+    console.log(`[ML-ETL] Salvo ${transQuery.rowCount} itens de transacoes em ${transactionFile}`);
+
     console.log('[ML-ETL] Extracao concluida com sucesso. Pronto para treinamento.');
   } catch (err) {
     console.error('[ML-ETL] Erro fatal durante a extracao:', err.message);
   } finally {
-    const { ecoPool } = require('../src/main/db');
-    await Promise.allSettled([pool.end(), ecoPool.end()]);
+    // In standalone scripts, we don't necessarily need to end pools if we use process.exit
+    // but if we do, we must use the .raw property of the wrapper.
+    const { pool, ecoPool } = require('../src/main/db');
+    if (pool.raw) await pool.raw.end();
+    if (ecoPool.raw) await ecoPool.raw.end();
   }
 }
 

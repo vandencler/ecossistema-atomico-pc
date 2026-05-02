@@ -35,5 +35,9 @@
   "driftBonus": {
     "multiplier": 1.3,
     "bonus": 15
+  },
+  "abTesting": {
+    "enabled": true,
+    "ratio": 0.5
   }
 }

@@ -16,8 +16,8 @@ async function setupWhatsAppFeedback() {
     `);
     console.log('✅ Tabela whatsapp_feedback criada ou ja existente.');
 
-    await ecoPool.query(`CREATE INDEX IF NOT EXISTS idx_wa_feedback_pessoa ON whatsapp_feedback(idpessoa);`);
-    await ecoPool.query(`CREATE INDEX IF NOT EXISTS idx_wa_feedback_event ON whatsapp_feedback(event_type);`);
+    await ecoPool.query('CREATE INDEX IF NOT EXISTS idx_wa_feedback_pessoa ON whatsapp_feedback(idpessoa);');
+    await ecoPool.query('CREATE INDEX IF NOT EXISTS idx_wa_feedback_event ON whatsapp_feedback(event_type);');
     console.log('✅ Indices criados.');
 
     console.log('--- Setup Concluido ---');

@@ -16,8 +16,9 @@ const { startAutoSync, getSyncStatus, performSync, setupRealTimeListener, genera
 const { checkHealth } = require('./src/main/services/healthService');
 const { warmUpCache } = require('./src/main/services/cacheService');
 const { reconcileCorrections } = require('./src/main/services/reconciliationService');
-const { flushTelemetry, trackEvent } = require('./src/main/services/telemetryService');
+const { flushTelemetry, trackEvent, setIdentity, getIdentity } = require('./src/main/services/telemetryService');
 const bulkIntelligenceService = require('./src/main/services/bulkIntelligenceService');
+const npsService = require('./src/main/services/npsService');
 
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
@@ -103,7 +104,7 @@ function createWindow() {
 
   uiService.setWindow(mainWindow);
   mainWindow.setVisibleOnAllWorkspaces(true);
-  mainWindow.setOpacity(0.95);
+  mainWindow.setOpacity(1.0);
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html')).finally(() => uiService.showExpanded());
   mainWindow.once('ready-to-show', () => uiService.showExpanded());
   mainWindow.webContents.once('did-finish-load', () => uiService.showExpanded());
@@ -112,7 +113,7 @@ function createWindow() {
 
   mainWindow.on('blur', () => {
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    if (!uiService.getState()) mainWindow.setOpacity(0.95);
+    // Opacity change disabled for stability
   });
 
   mainWindow.on('focus', () => {
@@ -219,6 +220,42 @@ ipcMain.handle('set-system-config', safeInvoke((e, c, v) => setSystemConfig(c, v
 ipcMain.handle('get-health', safeInvoke(() => checkHealth()));
 ipcMain.handle('run-reconciliation', safeInvoke(() => reconcileCorrections()));
 ipcMain.handle('open-whatsapp', safeInvoke((e, p) => uiService.openWhatsApp(p)));
+ipcMain.handle('open-external', safeInvoke((e, url) => {
+  const { shell } = require('electron');
+  return shell.openExternal(url);
+}));
+
+// Identity Domain
+ipcMain.handle('get-app-identity', () => getIdentity());
+ipcMain.handle('set-app-identity', safeInvoke(async (e, id) => {
+  const oldId = getIdentity();
+  setIdentity(id);
+  
+  // Phase 6: Send welcome message via WhatsApp if it's a new identity
+  if (id && id !== oldId) {
+    const omnichannelService = require('./src/main/services/omnichannelService');
+    omnichannelService.sendWelcomeMessage(id).catch(err => {
+      console.warn('[MAIN] Failed to send welcome message:', err.message);
+    });
+  }
+
+  return { ok: true, identity: getIdentity() };
+}, idValidator));
+
+ipcMain.handle('submit-feedback', safeInvoke((e, data) => recordFeedback(data.satisfaction, data.comment, data.deviceInfo)));
+
+// Help Domain
+ipcMain.handle('get-help-content', safeInvoke(async (event, fileName) => {
+  const fs = require('fs').promises;
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, ''); // Basic sanitization
+  const filePath = path.join(__dirname, 'docs', 'onboarding', safeName);
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch (e) {
+    console.error(`[IPC ERROR] Help file ${fileName} not found:`, e.message);
+    return { error: 'Arquivo de ajuda não encontrado.' };
+  }
+}));
 
 ipcMain.handle('get-executive-metrics', async () => {
   try {
@@ -226,7 +263,8 @@ ipcMain.handle('get-executive-metrics', async () => {
     
     const savRes = await ecoPool.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'PENDENTE') as pending FROM acoes_pendentes");
     const waRes = await ecoPool.query("SELECT COUNT(*) as total FROM omnichannel_mensagens WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'");
-    const clientRes = await ecoPool.query("SELECT COUNT(*) as total FROM ml_churn_risk WHERE risk_score > 70");
+    const clientRes = await ecoPool.query('SELECT COUNT(*) as total FROM ml_churn_risk WHERE risk_score > 70');
+    const npsSummary = await npsService.getSummary();
     
     return {
       sav: {
@@ -239,6 +277,7 @@ ipcMain.handle('get-executive-metrics', async () => {
       intelligence: {
         high_risk: parseInt(clientRes.rows[0].total)
       },
+      nps: npsSummary,
       system: {
         version: 'v1.1.2',
         status: 'OPTIMIZED'
@@ -322,6 +361,10 @@ app.whenReady().then(async () => {
   // 1. Initial Checks
   await runPreFlight();
 
+  // 1b. Initialize Identity
+  const savedIdentity = await getConfigValue('app_identity');
+  if (savedIdentity) setIdentity(savedIdentity);
+
   // 2. Local State
   initLocalDb(app.getPath('userData'));
 
@@ -352,6 +395,8 @@ app.whenReady().then(async () => {
   setInterval(() => reconcileCorrections(), 43200000); // 12h
   setInterval(() => flushTelemetry(), 900000); // 15m
   setInterval(() => bulkIntelligenceService.runSweep(), 21600000); // 6h
+  setInterval(() => npsService.runCycle(), 43200000); // 12h
+  setInterval(() => uiService.revalidateBounds(), 60000); // 1m check
 
   // 6. Check for OTA Updates and run initial sweep
   setTimeout(() => {
@@ -361,6 +406,10 @@ app.whenReady().then(async () => {
   setTimeout(() => {
     bulkIntelligenceService.runSweep();
   }, 30000); // Initial sweep 30s after ready
+
+  setTimeout(() => {
+    npsService.runCycle();
+  }, 60000); // Initial NPS check 1m after ready
 });
 
 app.on('before-quit', async () => {

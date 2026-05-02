@@ -39,13 +39,24 @@ async function request(method, path, body = null) {
 }
 
 async function run() {
-  try {
-    const issueId = "9ec6a5c9-958b-4c69-91f4-aa95799b6aed"; // EAV-84
-    await request('PATCH', `/api/issues/${issueId}`, { status: 'done', comment: 'Phase 6 Deployment Authorized. The underlying architecture (Bulk Telemetry, Trigram Queries, and SQLite Local Cache) has been validated to sustain the concurrency of 50 users without network degradation. I have generated the formal `docs/CTO_PHASE6_SIGN_OFF.md` for IT Operations to commence the executable rollout via SCCM/GPO.' });
-    console.log('EAV-84 closed');
-  } catch(e) {
-    console.error(e.message);
+  const tasks = [
+    { id: "b2e15c36-7ba7-4462-a6b6-ad6478ef2f2e", status: 'done', comment: 'Telemetry Identity implemented. System now supports OS username fallback and manual override in Settings. Persisted in `config_sistema`.', expected: ["in_progress"], name: 'EAV-108' },
+    { id: "e444afef-7092-428d-bccf-8603aa350a4c", status: 'done', comment: 'WhatsApp Onboarding messages configured in OmnichannelService.js and seeded in database.', expected: ["in_progress"], name: 'EAV-103' },
+    { id: "3654a02d-4eaf-42d2-b1dc-732aa5a726f9", status: 'done', comment: 'Support Link and WhatsApp Support button added to Settings tab. CSS and HTML updated for consistent UI.', expected: ["backlog", "todo"], name: 'EAV-107' },
+    { id: "62372f88-51f7-41a4-9669-0dfa02476721", status: 'done', comment: 'Duplicate of [EAV-107](/EAV/issues/EAV-107). Closed as part of UI standardization.', expected: ["in_progress"], name: 'EAV-104' },
+    { id: "9dee43ea-2cc9-4568-9eca-8c58ee0ce62f", status: 'done', comment: 'Onboarding Cheat Sheet and FAQ approved and verified in `docs/onboarding/`.', expected: ["in_review"], name: 'EAV-101' }
+  ];
+
+  for (const task of tasks) {
+    try {
+      await request('POST', `/api/issues/${task.id}/checkout`, { agentId, expectedStatuses: task.expected });
+      await request('PATCH', `/api/issues/${task.id}`, { status: task.status, comment: task.comment });
+      console.log(`${task.name} handled`);
+    } catch(e) {
+      console.log(`Skipping ${task.name}: ${e.message}`);
+    }
   }
+  console.log('All applicable Phase 6 readiness tasks processed');
 }
 
 run();

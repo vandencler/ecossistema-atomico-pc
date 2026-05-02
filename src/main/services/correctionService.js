@@ -15,7 +15,7 @@ async function saveCorrection(payload) {
     const normalized = normalizeCorrectionPayload(payload);
     idpessoa = normalized.idpessoa;
 
-    await trackEvent('SAV_CREATION', normalized.criadoPor || 'unknown', {
+    await trackEvent('SAV_CREATION', normalized.criadoPor || 'auto', {
       idpessoa,
       change_count: normalized.changes.length,
       origem: normalized.origem

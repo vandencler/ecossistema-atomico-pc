@@ -28,11 +28,16 @@ contextBridge.exposeInMainWorld('atomico', {
   setSystemConfig: (c, v) => ipcRenderer.invoke('set-system-config', c, v),
   getHealth: () => ipcRenderer.invoke('get-health'),
   getExecutiveMetrics: () => ipcRenderer.invoke('get-executive-metrics'),
+  getAppIdentity: () => ipcRenderer.invoke('get-app-identity'),
+  setAppIdentity: (id) => ipcRenderer.invoke('set-app-identity', id),
+  getHelpContent: (fileName) => ipcRenderer.invoke('get-help-content', fileName),
   runReconciliation: () => ipcRenderer.invoke('run-reconciliation'),
   openWhatsApp: (data) => ipcRenderer.invoke('open-whatsapp', data),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
   exportClientData: (id, format) => ipcRenderer.invoke('export-client-data', id, format),
   bulkExportClients: (ids, format) => ipcRenderer.invoke('bulk-export-clients', ids, format),
   bulkExportByPriority: (priorityBucket, format) => ipcRenderer.invoke('bulk-export-priority', priorityBucket, format),
   onNotificationReceived: (cb) => ipcRenderer.on('notification-received', (_, data) => cb(data)),
-  onNavigateTo: (cb) => ipcRenderer.on('navigate-to', (_, section) => cb(section))
+  onNavigateTo: (cb) => ipcRenderer.on('navigate-to', (_, section) => cb(section)),
+  submitFeedback: (data) => ipcRenderer.invoke('submit-feedback', data)
 });
