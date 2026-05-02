@@ -37,9 +37,10 @@
 *   **Novas Features:** Integrado suporte a **Status de Crédito**, **Localização** e **Completude de Perfil** no cálculo de prioridade.
 
 ## 6. Próximos Passos Recomendados
-1.  **Liberação de Permissões (EAV-118):** Restaurar acesso a `docitem/documen` para recalibrar o modelo v1.2.
-2.  **Campanha Sorocaba:** Direcionar os 10 Power Users para testar as recomendações Lookalike na região de Sorocaba.
-3.  **Ação em UX:** Investigar os feedbacks negativos reportados no manual do app.
+1.  **Liberação de Permissões (EAV-118):** Restaurar acesso a \`docitem/documen\` para recalibrar o modelo v1.2. Atualmente, novas extrações de vendas estão bloqueadas.
+2.  **Agendamento de Pipeline:** Mover o \`npm run ml:extract\` para as **03:00 AM** para evitar picos de carga (19h-21h) e otimizar o uso do throttler.
+3.  **Campanha Sorocaba:** Direcionar os 10 Power Users para testar as recomendações Lookalike na região de Sorocaba.
+4.  **Ação em UX:** Investigar os feedbacks negativos reportados no manual do app (Bug da Barra Lateral).
 
 ---
 *Gerado por Gemini Data Scientist para o EAV Board*
