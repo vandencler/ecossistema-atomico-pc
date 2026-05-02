@@ -29,7 +29,7 @@ function evaluateChurnModel() {
   }
 
   for (const row of data) {
-    const [idpessoa, recency, frequency, monetary, tenure, avg_basket, group_div] = row.split(',');
+    const [_idpessoa, recency, frequency, monetary, tenure, avg_basket, group_div] = row.split(',');
     
     const rec = parseFloat(recency);
     const freq = parseFloat(frequency || 0);
@@ -87,7 +87,7 @@ function evaluateChurnModel() {
       baskets[iddoc].push(idprod);
     });
 
-    const hits = 0;
+    // const hits = 0;
     let totalTests = 0;
 
     // Leave-one-out validation simulation
@@ -95,13 +95,13 @@ function evaluateChurnModel() {
     console.log(`[EVAL] Testando em ${basketList.length} cestas com múltiplos itens...`);
 
     for (const items of basketList.slice(0, 1000)) { // Limit test size
-      const target = items[items.length - 1];
-      const history = items.slice(0, items.length - 1);
+      const _target = items[items.length - 1];
+      const _history = items.slice(0, items.length - 1);
       
       // Check if any rule exists for (history -> target)
       // Since we don't have the rule engine here, we simulate it by checking pair counts
       // In a real DS environment, we'd use the model's 'predict' function.
-      totalTests++;
+      // totalTests++;
     }
     // Simulation: High Lift rules typically achieve 15-25% hit rate in this baseline
     affinityRecall = 0.22; 
@@ -112,7 +112,7 @@ function evaluateChurnModel() {
   
   // A/B Test Simulation
   const abGroups = { A: 0, B: 0 };
-  const abScores = { A: 0, B: 0 };
+  // const abScores = { A: 0, B: 0 };
   
   for (const row of data) {
     const [idpessoa] = row.split(',');
