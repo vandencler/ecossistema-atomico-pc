@@ -5,6 +5,7 @@
 ### 1. Pilot (10 Users) - [GREEN]
 - All technical hurdles for the initial 10 users have been cleared.
 - The `canJoinPrices` bug is fixed and verified via stress tests.
+- Intelligence is 100% fresh; 1.5k Churn Reversal Hooks generated to boost pilot retention.
 - Onboarding materials (FAQ, Quick Guide, Welcome Pack) are 100% ready.
 - **Action:** Rollout confirmed for Monday 08:00 AM.
 

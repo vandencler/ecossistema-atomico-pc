@@ -10,6 +10,7 @@ class UIService {
     this.mainWindow = null;
     this.tagY = -1;
     this.initialized = false;
+    this.toggling = false;
   }
 
   setWindow(window) {
@@ -35,22 +36,29 @@ class UIService {
   }
 
   async toggleSidebar() {
-    const { logEvent } = require('./logService');
-    const { setSystemConfig } = require('./configService');
-    if (!this.mainWindow) return false;
-    
-    this.isExpanded = !this.isExpanded;
-    await setSystemConfig('ui_sidebar_expanded', String(this.isExpanded));
+    if (this.toggling) return this.isExpanded;
+    this.toggling = true;
 
-    if (this.isExpanded) {
-      this.showExpanded();
-      logEvent('UI_SIDEBAR_EXPAND', '0', 'Sidebar expandida pelo usuario');
-    } else {
-      this.showCollapsed();
-      logEvent('UI_SIDEBAR_COLLAPSE', '0', 'Sidebar recolhida pelo usuario');
+    try {
+      const { logEvent } = require('./logService');
+      const { setSystemConfig } = require('./configService');
+      if (!this.mainWindow) return false;
+      
+      this.isExpanded = !this.isExpanded;
+      await setSystemConfig('ui_sidebar_expanded', String(this.isExpanded));
+
+      if (this.isExpanded) {
+        this.showExpanded();
+        logEvent('UI_SIDEBAR_EXPAND', '0', 'Sidebar expandida pelo usuario');
+      } else {
+        this.showCollapsed();
+        logEvent('UI_SIDEBAR_COLLAPSE', '0', 'Sidebar recolhida pelo usuario');
+      }
+
+      return this.isExpanded;
+    } finally {
+      this.toggling = false;
     }
-
-    return this.isExpanded;
   }
 
   showExpanded() {
@@ -58,13 +66,22 @@ class UIService {
     const { x, y, w, h } = this.getScreenEdge();
     this.isExpanded = true;
     this.mainWindow.setOpacity(1.0);
-    this.mainWindow.setBounds({ x: x + w - this.SIDEBAR_WIDTH, y, width: this.SIDEBAR_WIDTH, height: h });
+    
+    // Explicitly set bounds with high priority
+    this.mainWindow.setBounds({ 
+      x: x + w - this.SIDEBAR_WIDTH, 
+      y, 
+      width: this.SIDEBAR_WIDTH, 
+      height: h 
+    });
+    
     this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     this.mainWindow.show();
-    this.mainWindow.restore(); // Ensure it is not minimized
+    this.mainWindow.restore(); 
     this.mainWindow.focus();
     this.mainWindow.moveTop();
     this.mainWindow.webContents.send('sidebar-toggled', true);
+    console.log('[UI] Sidebar expanded');
     return true;
   }
 
@@ -73,12 +90,21 @@ class UIService {
     const { x, y, w, h } = this.getScreenEdge();
     if (this.tagY === -1) this.tagY = y + Math.round(h * 0.25);
     const tagY = this.tagY;
+    
     this.isExpanded = false;
     this.mainWindow.setOpacity(1.0);
-    this.mainWindow.setBounds({ x: x + w - this.COLLAPSED_WIDTH, y: tagY, width: this.COLLAPSED_WIDTH, height: this.COLLAPSED_HEIGHT });
+    
+    // Explicitly set bounds with high priority
+    this.mainWindow.setBounds({ 
+      x: x + w - this.COLLAPSED_WIDTH, 
+      y: tagY, 
+      width: this.COLLAPSED_WIDTH, 
+      height: this.COLLAPSED_HEIGHT 
+    });
+    
     this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     this.mainWindow.show();
-    this.mainWindow.restore(); // Ensure it is not minimized
+    this.mainWindow.restore(); 
     this.mainWindow.moveTop();
     this.mainWindow.webContents.send('sidebar-toggled', false);
     console.log(`[UI] Sidebar collapsed at y=${tagY}`);
@@ -86,21 +112,22 @@ class UIService {
   }
 
   revalidateBounds() {
-    if (!this.mainWindow) return;
+    if (!this.mainWindow || this.toggling) return;
+    
     const bounds = this.mainWindow.getBounds();
     const s = this.getScreenEdge();
     
-    // If window is completely off-screen, or hidden, or not on top, reset it
-    const isOffScreen = bounds.x < s.x - 100 || bounds.x > s.x + s.w + 100;
+    // Tolerance check: only reset if discrepancy is real
+    const expectedWidth = this.isExpanded ? this.SIDEBAR_WIDTH : this.COLLAPSED_WIDTH;
+    const widthDiscrepancy = Math.abs(bounds.width - expectedWidth) > 2;
+    const isOffScreen = bounds.x < s.x - 50 || bounds.x > s.x + s.w + 50;
     const isMinimized = this.mainWindow.isMinimized();
     const isVisible = this.mainWindow.isVisible();
+    const isOnTop = this.mainWindow.isAlwaysOnTop();
     
-    if (isOffScreen || isMinimized || !isVisible || !this.mainWindow.isAlwaysOnTop()) {
-      console.warn(`[UI] Window anomaly detected (OffScreen=${isOffScreen}, Minimized=${isMinimized}, Visible=${isVisible}), resetting...`);
+    if (widthDiscrepancy || isOffScreen || isMinimized || !isVisible || !isOnTop) {
+      console.warn(`[UI] Anomaly: W_Diff=${widthDiscrepancy}, OffScreen=${isOffScreen}, Minimized=${isMinimized}, Visible=${isVisible}, OnTop=${isOnTop}`);
       this.isExpanded ? this.showExpanded() : this.showCollapsed();
-    } else {
-      // Force always on top again just in case
-      this.mainWindow.setAlwaysOnTop(true, 'screen-saver');
     }
   }
 

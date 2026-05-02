@@ -9,6 +9,7 @@ The scoring engine has been completely overhauled to support the 50-representati
 *   **Supervised Churn Model:** Transitioned from RFM heuristics to a weighted logistic-style model. Added features: Customer Tenure, Average Basket Size, Category Diversity, and Credit Status.
 *   **Segmented Recommendations:** Implemented Market Basket Analysis with Lift/Support metrics. Added demographic filtering (Gender-based) to ensure recommendation relevance.
 *   **Regional Strategy:** Identified 9,831 high-potential "Lookalike" prospects in Sorocaba and generated targeted activation lists. Created `docs/SOROCABA_LOOKALAKE_STRATEGY.md` for CMO.
+*   **Churn Reversal Hooks:** Generated 1,510 high-confidence "Retention Hooks" mapping at-risk clients to their most essential products with tailored sales pitches.
 
 ## 2. Robustness & Resilience
 *   **A/B Testing Framework:** Deterministic 50/50 split implemented in `IntelligenceService`. Performance is tracked via Telemetry for objective validation.

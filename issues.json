@@ -1,5 +1,14 @@
 [
   {
+    "id": "EAV-145",
+    "title": "UX Bug: Sidebar intermittent disappearance (Regression)",
+    "assignee": "UXDesigner",
+    "status": "completed",
+    "priority": "high",
+    "description": "Hardened sidebar state management in EAV-145 by implementing a toggle lock in the main process (uiService.js) and state change deduplication in the renderer (app.js). This eliminates race conditions from rapid clicking and ensures UI/Main synchronization.",
+    "notes": "Verified with synthetic rapid-toggle simulation. Ready for Monday pilot."
+  },
+  {
     "id": "EAV-134",
     "title": "UX Bug: Sidebar disappears intermittently",
     "assignee": "Engineering",

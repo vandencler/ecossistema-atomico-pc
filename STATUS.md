@@ -14,7 +14,7 @@ The EAV platform is 100% operational for the **10-user Power User Pilot**. All i
 
 ## Blockers & Resolved Items
 1. **EAV-94 (Unblocked for Pilot):** Permissions and Trigram indexes verified. Connection limit (100) is sufficient for 10 users.
-2. **EAV-134 (UX):** Sidebar fix verified.
+2. **EAV-145 (UX):** Sidebar intermittent disappearance regression RESOLVED. Applied toggle locking and renderer state deduplication.
 3. **EAV-133 (Stability):** canJoinPrices fix verified.
 
 ## Next Steps
@@ -27,8 +27,22 @@ The EAV platform is 100% operational for the **10-user Power User Pilot**. All i
 - [x] **[UX] Sidebar Hardening:** 🟢 APPLIED. Confirmed 5s revalidation interval and added skipTaskbar: true to prevent accidental minimization.
 - [!] **Go-Live Status:** Technical GO for Pilot launch. Full expansion (50 reps) still requires server restart for max_connections.
 
-## CTO Gemini Heartbeat (2026-05-02 - 01:45)
-- [x] **[STABILITY] Pilot Environment Verified:** 🟢 HEALTHY. Mirror and Ecosystem DBs are operational. Verified zero table blocks and active indexes.
-- [x] **[PERF] Slow Query Monitoring:** 🟢 IMPROVED. Slow queries dropped to 367/hr (previously 761/hr) after index stabilization.
-- [x] **[OPS] WhatsApp Failure Audit:** 🟢 ANALYZED. Confirmed OMNI_WA_FAILs are purely due to missing/invalid source data (sellers without phones), not infrastructure issues.
-- [!] **Operational Signal:** Technical **GO** for Monday Pilot. Monitoring cycle will resume at launch.
+## CTO Gemini Heartbeat (2026-05-02 - 04:55)
+- [x] **[PERMISSIONS] Mirror DB Audit (EAV-141):** 🟢 VERIFIED. `eav_writer` has full SELECT access to `wshop`. Re-applied surgical GRANTS to confirm state.
+- [x] **[SCALE] Verify Connections:** 🔴 BLOCKED. `max_connections` is 100. Target 250 requires server restart. Server does not see pending change.
+- [!] **Strategic Alert:** Pilot (10 users) is 🟢 GO. Scale-up (50 users) is 🔴 BLOCKED by connection limit. DBA action required.
+## CTO Gemini Heartbeat (2026-05-02 - 02:50)
+- [x] **[MONITORING] Pilot Pulse:** 🟢 HEALTHY. Run `monitor_pilot.js`. 0 Search Errors in last hour. Latency stabilized.
+- [x] **[INDEX] Usage Verified:** 🟢 CONFIRMED. `idx_docitem_idpessoa` usage verified via EXPLAIN ANALYZE for dashboard queries.
+- [x] **[INFRA] Final Signal:** 🟢 ISSUED. Updated `docs/READY_TO_RESTART.md` with final audit results. Scale-up still requires DBA restart.
+- [!] **Verdict:** System is 100% READY for Monday 08:00 AM Launch (10 users).
+
+## Implementer-2 Heartbeat (2026-05-02 - 02:25)
+- [x] **[RESILIENCE] Sync Hardening (EAV-149):** 🟢 COMPLETED. Single-connection batch processing implemented and verified.
+- [x] **[PERF] Config Cache (EAV-143):** 🟢 COMPLETED. Reduced Ecosystem DB lookup churn.
+- [!] **Final Verdict:** Technical track for Phase 6 is logic-complete. Verified 54 tests passing.
+
+## CTO Gemini Heartbeat (2026-05-02 - 05:20)
+- [x] **[INFRA] Index Verification:** 🟢 SUCCESS. idx_docitem_idpessoa is working as expected (8ms latency). Trigram search verified at ~210ms (stable).
+- [x] **[DBA] Pending Interaction:** 🟡 OBSERVED. Interaction 30a77ba8 for server restart is still PENDING board approval.
+- [!] **Go-Live Status:** Technical GO for Pilot (10 users). Scale-up (50 users) remains HARD BLOCKED by max_connections.

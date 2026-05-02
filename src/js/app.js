@@ -21,6 +21,7 @@ import { MaintenanceBanner } from './ui/components.js';
 let isDragging = false;
 let dragStartY = 0;
 let dragMoved = false;
+let currentSidebarState = null;
 
 async function checkSystemHealth() {
   try {
@@ -55,11 +56,18 @@ function setSidebarState(expanded, source = 'unknown') {
     return;
   }
 
+  // Cast to boolean and deduplicate
   const isExpanded = !!expanded;
+  if (currentSidebarState === isExpanded && source !== 'INIT' && source !== 'FATAL_FALLBACK') {
+    console.log(`[UI] [${source}] Sidebar state already ${isExpanded ? 'EXPANDED' : 'COLLAPSED'}, skipping update.`);
+    return;
+  }
+
+  currentSidebarState = isExpanded;
   tab.hidden = isExpanded;
   sidebar.hidden = !isExpanded;
   
-  console.log(`[UI] [${source}] Sidebar state set:`, isExpanded ? 'EXPANDED' : 'COLLAPSED');
+  console.log(`[UI] [${source}] Sidebar state set:`, isExpanded ? 'EXPANDED' : 'COLLAPSED', `(Width: ${window.innerWidth}px)`);
   
   if (isExpanded) {
     const input = $('search-input');
@@ -68,7 +76,10 @@ function setSidebarState(expanded, source = 'unknown') {
 }
 
 function setupSidebar() {
-  api.onSidebarToggled((expanded) => setSidebarState(expanded, 'IPC_EVENT'));
+  api.onSidebarToggled((expanded) => {
+    console.log('[UI] Received sidebar-toggled event:', expanded);
+    setSidebarState(expanded, 'IPC_EVENT');
+  });
 
   const tab = $('collapsed-tab');
   tab.addEventListener('mousedown', (event) => {
@@ -126,38 +137,45 @@ function setupNotifications() {
   });
 }
 
-(async function init() {
+async function init() {
   try {
+    console.log('[UI] Initializing...');
+    
+    // Ensure we have the latest state from main
+    setupSidebar(); 
+    setupNotifications();
+    setupNavigation({ 
+      onOpenClient: openClient, 
+      onOpenWhatsApp: openWhatsApp 
+    });
+    setupSearch(openClient); 
+    setupCorrections();
+    setupFeedback(); 
+    
+    checkSystemHealth();
+    
+    const expanded = await api.getSidebarState();
+    setSidebarState(expanded, 'INIT');
 
-  console.log('[UI] Initializing...');
-  setupSidebar(); console.log('[UI] Sidebar setup done');
-  setupNotifications(); console.log('[UI] Notifications setup done');
-  setupNavigation({ 
-    onOpenClient: openClient, 
-    onOpenWhatsApp: openWhatsApp 
-  });
-  setupSearch(openClient); console.log('[UI] Search setup done');
-  setupCorrections();
-  setupFeedback(); console.log('[UI] Feedback setup done');
-  
-  checkSystemHealth();
-  
-  const expanded = await api.getSidebarState();
-  setSidebarState(expanded, 'INIT');
-
-  updateNavAlerts();
-  setInterval(updateNavAlerts, 60000);
+    updateNavAlerts();
+    setInterval(updateNavAlerts, 60000);
 
   } catch (e) {
     console.error('[UI] Init failed:', e);
-    // Fallback: Try to show collapsed sidebar at least
     try { setSidebarState(false, 'FATAL_FALLBACK'); } catch(_e2) {}
   }
-})();
+}
+
+// Start when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 document.addEventListener('visibilitychange', () => {
-  console.log('[UI] Visibility changed:', document.visibilityState);
   if (document.visibilityState === 'visible') {
+    console.log('[UI] Visibility visible, re-syncing state...');
     api.getSidebarState().then(expanded => setSidebarState(expanded, 'VISIBILITY_CHANGE'));
   }
 });

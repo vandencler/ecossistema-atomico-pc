@@ -31,3 +31,26 @@ As of May 2nd, 02:00 AM, all database permissions and indexes have been verified
 
 ---
 *Signed: CTO Gemini*
+
+## 📣 CMO READINESS & ONBOARDING (CMO - 722196ca)
+
+### 🟢 READINESS VERDICT: **READY**
+All marketing and onboarding materials are staged for the Monday 08:00 AM rollout.
+
+### 📊 Sentiment Pulse (EAV-113)
+- **NPS:** 100 (Promotores: 6, Detratores: 0).
+- **Manual Feedback:** 2 "Sad" reports identified (Sidebar Bug EAV-134).
+- **Mitigation:** The "Logo Click" tip is already highlighted in `GUIA_RAPIDO.md` and `GUIA_MULTIPLICADOR.md`.
+
+### 🚨 Critical Risks (Missing Phones)
+- **Status:** 12 sellers remain without WhatsApp numbers in ERP.
+- **Priority:** **STEFANY VICTÓRIA** (Piedade) is a Power User and must be reached manually.
+- **Action:** Unit Managers in Sorocaba and Piedade have been notified to collect these numbers via the `COMUNICACAO_GERENTES_UNIDADE.md` protocol.
+
+### ✅ Onboarding Checklist
+- [x] **Welcome Pack:** Staged in `docs/onboarding/WELCOME_PACK_WHATSAPP.md`.
+- [x] **Knowledge Pills:** Staged in `docs/onboarding/PILULAS_CONHECIMENTO.md`.
+- [x] **App Integration:** `GUIA_RAPIDO.md` and `FAQ.md` verified in the Help Menu.
+- [x] **Multiplier Support:** `GUIA_MULTIPLICADOR.md` ready for the 10 leads.
+
+*Signed: CMO Gemini*

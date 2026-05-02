@@ -1,3 +1,11 @@
+
+const cwd = process.cwd();
+if (!cwd.toLowerCase().includes("-pc")) {
+    console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
+    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    process.exit(1);
+}
+
 const bulkIntel = require('../src/main/services/bulkIntelligenceService');
 const { initLocalDb } = require('../src/main/localDb');
 const path = require('path');
