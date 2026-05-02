@@ -63,7 +63,23 @@ async function monitor() {
       WHERE event_name = 'SLOW_QUERY'
         AND occurred_at > NOW() - INTERVAL '1 hour'
     `);
-    console.log(`- Slow Queries (1h):   ${slowRes.rows[0].count} (Target: EAV-101)`);
+    console.log(`- Slow Queries (1h):   ${slowRes.rows[0].count} (Target: EAV-101/EAV-94)`);
+
+    // 4b. EAV-94 Specific Blockers
+    console.log('\n[!] Blockers de Escala (EAV-94):');
+    const eav94Tables = ['docitem', 'documen', 'produto', 'tabelaprecos'];
+    let permissionCount = 0;
+    for (const table of eav94Tables) {
+      const ok = await pool.query(`SELECT 1 FROM wshop.${table} LIMIT 1`).then(() => true).catch(() => false);
+      if (!ok) permissionCount++;
+    }
+    console.log(`- Tabelas bloqueadas:  ${permissionCount}/${eav94Tables.length} ${permissionCount > 0 ? '🔴' : '🟢'}`);
+    
+    const docItemIdx = await pool.query(`
+      SELECT indexname FROM pg_indexes 
+      WHERE schemaname = 'wshop' AND tablename = 'docitem' AND indexname = 'idx_docitem_idpessoa'
+    `).then(r => r.rowCount > 0).catch(() => false);
+    console.log(`- Index docitem_idp:   ${docItemIdx ? '🟢 OK' : '🔴 MISSING (Slow Dashboard)'}`);
 
     // 5. ML & Intelligence
     console.log('\n[🧠] Inteligência & ML Coverage:');
