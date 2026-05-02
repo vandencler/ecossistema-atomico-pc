@@ -58,7 +58,8 @@ GRANT SELECT ON
     wshop.documento_nfce, 
     wshop.movcaix, 
     wshop.tprec, 
-    wshop.grupo 
+    wshop.grupo,
+    wshop.ranking_calculadoloja
 TO eav_writer, eav_reader;
 
 -- Grant UPDATE on sync targets (SAV Workflow) ONLY to eav_writer

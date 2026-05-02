@@ -1,0 +1,1 @@
+const { ecoPool } = require('./src/main/db'); async function run() { const res = await ecoPool.query('SELECT count(*) FROM log_eventos WHERE tipo = \x27SEARCH_ERROR\x27 AND criado_em > NOW() - INTERVAL \x271 hour\x27'); console.log('Search Errors:', res.rows[0].count); process.exit(); } run();
