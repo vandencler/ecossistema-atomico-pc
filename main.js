@@ -259,7 +259,7 @@ ipcMain.handle('get-help-content', safeInvoke(async (event, fileName) => {
 
 ipcMain.handle('get-executive-metrics', async () => {
   try {
-    const { ecoPool, pool } = require('./src/main/db');
+    const { ecoPool } = require('./src/main/db');
     
     const savRes = await ecoPool.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'PENDENTE') as pending FROM acoes_pendentes");
     const waRes = await ecoPool.query("SELECT COUNT(*) as total FROM omnichannel_mensagens WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'");

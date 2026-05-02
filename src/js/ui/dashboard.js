@@ -1,4 +1,4 @@
-import { $, setChildren, create, stateMessage } from '../utils.js';
+import { $, setChildren, stateMessage } from '../utils.js';
 import { api } from '../api.js';
 import { MetricCard } from './components.js';
 

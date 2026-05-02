@@ -1,6 +1,6 @@
 const { pool, ecoPool, settings } = require('../db');
 const { logError } = require('./logService');
-const { checkHealth, isOfflineMode, getLastHealth, isSearchOptimized, getIndexMap } = require('./healthService');
+const { isOfflineMode, getLastHealth, getIndexMap } = require('./healthService');
 
 const { trackEvent } = require('./telemetryService');
 const { 
@@ -179,8 +179,8 @@ async function searchClient(query) {
       queryTrimmed    // $3
     ];
 
-    const rawIdx = 2;
-    const trimIdx = 3;
+    // const rawIdx = 2;
+    // const trimIdx = 3;
 
     const conditions = tokens.map((token) => {
       const textParam = `%${token}%`;
