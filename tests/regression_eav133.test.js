@@ -1,0 +1,1 @@
+const test = require('node:test'); const assert = require('node:assert'); const { searchClient } = require('../src/main/services/clientService'); test('searchClient - handles partial health data without ReferenceError', async () => { const res = await searchClient('nonexistent'); assert.ok(res.rows || res.error, 'Should return rows or an error object, not throw'); });

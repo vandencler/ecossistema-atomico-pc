@@ -124,7 +124,7 @@ function setupNotifications() {
   } catch (e) {
     console.error('[UI] Init failed:', e);
     // Fallback: Try to show collapsed sidebar at least
-    try { setSidebarState(false, 'FATAL_FALLBACK'); } catch(e2) {}
+    try { setSidebarState(false, 'FATAL_FALLBACK'); } catch(_e2) {}
   }
 })();
 

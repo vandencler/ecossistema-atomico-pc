@@ -155,6 +155,7 @@ async function applyTableNameOverlay(profile, fixes, canJoinPrices) {
 }
 
 async function searchClient(query) {
+  let canJoinPrices = false;
   try {
     await trackEvent('CLIENT_SEARCH', 'auto', { query });
 
@@ -172,7 +173,7 @@ async function searchClient(query) {
     
     // Safety: Default to false if health or mirror data is missing
     const mirrorHealth = health?.databases?.mirror;
-    const canJoinPrices = mirrorHealth?.accessibleTables?.tabelaprecos === true;
+    canJoinPrices = mirrorHealth?.accessibleTables?.tabelaprecos === true;
 
     const queryTrimmed = query.trim();
     const queryRaw = queryTrimmed.toLowerCase();
@@ -570,14 +571,14 @@ async function getClientDashboard(rawIdPessoa) {
     `, [idpessoa]);
 
     const fixes = {};
-    if (corrections && corrections.rows) {
+    if (corrections && Array.isArray(corrections.rows)) {
       corrections.rows.forEach((row) => {
         fixes[row.campo] = row.valor_corrigido;
       });
     }
 
     const actionStatus = {};
-    if (actionStatuses && actionStatuses.rows) {
+    if (actionStatuses && Array.isArray(actionStatuses.rows)) {
       actionStatuses.rows.forEach((row) => {
         actionStatus[row.campo] = {
           id: row.id,

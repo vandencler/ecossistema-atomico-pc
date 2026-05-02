@@ -119,7 +119,7 @@ class SentimentService {
   /**
    * Alias for backward compatibility or individual message ingestion.
    */
-  async analyzeMessage(idpessoa, content) {
+  async analyzeMessage(idpessoa, _content) {
     await this.refreshClientSentiment(idpessoa);
   }
 

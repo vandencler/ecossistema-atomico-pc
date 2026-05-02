@@ -101,7 +101,7 @@ class BulkIntelligenceService {
           WHERE p.stativo = 'S'
         `);
         clients = clientsRes.rows;
-      } catch (_clientErr) {
+      } catch (__clientErr) {
         console.warn('[BULK INTEL] Falha ao buscar estatísticas complexas, tentando lista simples...');
         const simpleRes = await pool.query(`
           SELECT p.idpessoa, p.dtultimacompra, cr.dtdatanasc, 0 as freq_dias

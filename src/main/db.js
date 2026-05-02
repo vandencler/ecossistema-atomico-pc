@@ -96,7 +96,7 @@ function createPoolProxy(poolInstance, label) {
                   pool: label,
                   sql: typeof args[0] === 'string' ? args[0].trim().slice(0, 150) : 'object_query'
                 }).catch(() => {});
-              } catch (e) { /* ignore telemetry errors */ }
+              } catch (_e) { /* ignore telemetry errors */ }
             }
             return res;
           } catch (err) {
