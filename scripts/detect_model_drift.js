@@ -66,6 +66,10 @@ async function detectDrift() {
 
     if (hasSignificantDrift) {
       console.warn('\n[ML-DRIFT] ATENÇÃO: Desvio significativo detectado. Recomenda-se recalibrar os pesos do modelo v1.2.');
+      await ecoPool.query(`
+        INSERT INTO log_eventos (tipo, idpessoa, detalhe, criado_em)
+        VALUES ('SYSTEM_ALERT', '0', 'ML Model Drift Detected: Deviation > 15% from baseline in churn buckets.', NOW())
+      `);
     } else {
       console.log('\n[ML-DRIFT] Modelo está operando dentro dos parâmetros de estabilidade.');
     }
