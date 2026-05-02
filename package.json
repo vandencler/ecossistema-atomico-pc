@@ -1,6 +1,6 @@
 {
   "name": "ecossistema-atomico",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "description": "Ecossistema Atomico de Vendas - Emporio Natural",
   "main": "main.js",
   "scripts": {
