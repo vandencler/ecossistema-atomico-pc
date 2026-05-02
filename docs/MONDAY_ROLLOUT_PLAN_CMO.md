@@ -23,15 +23,18 @@
 - **Message:** "Pílula #1: A Busca Atômica 🔍"
 - Focus: Speed and error tolerance.
 
-### 12:00 - Mid-Day Report
+### 14:00 - Mid-Day Report
 - Run `node scripts/generate_sentiment_report.js`.
 - Deliver status update to Board/CEO.
 
-### 14:00 - Knowledge Injection #2
-- **Message:** "Pílula #3: Cadastro é Dinheiro ✏️"
-- Focus: SAV Corrections.
+### 14:30 - Expansion Trigger (Wave 2 - 50 Users)
+- **GO/NO-GO Decision:** 
+  1. Check if DBA completed `EAV-94` (Restart for `max_connections >= 250`).
+  2. Verify NPS from the morning group is > 70.
+  3. Confirm `monitor_pilot.js` shows no performance degradation.
+- **Action:** If GO, dispatch `ANUNCIO_EXPANSAO_50.md` to the internal communication channel and trigger the bulk WhatsApp Welcome Pack for the new 40 users.
 
-### 15:30 - Knowledge Injection #3
+### 15:30 - Knowledge Injection #2
 - **Message:** "Pílula #2: O Poder do Offline ⚡"
 - Focus: Resilience.
 
