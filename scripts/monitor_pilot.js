@@ -1,4 +1,6 @@
 const { ecoPool, pool } = require('../src/main/db');
+const fs = require('fs');
+const path = require('path');
 
 async function monitor() {
   console.log('=== EAV Pilot Technical Monitoring Command Center ===');
@@ -29,7 +31,7 @@ async function monitor() {
       errorRes.rows.forEach(r => {
         let alert = '';
         if (r.tipo === 'SAV_UNDO_ERROR' || r.tipo === 'SYNC_ERROR') alert = ' ⚠️ (Param Mismatch Fix Applied)';
-        console.log(`- ${r.tipo}: ${r.count}${alert} (Ultimo: ${new Date(r.last_seen).toLocaleTimeString()})`);
+        console.log(`- ${r.tipo.padEnd(20)}: ${String(r.count).padStart(3)}${alert} (Ultimo: ${new Date(r.last_seen).toLocaleTimeString()})`);
       });
     }
 
@@ -74,19 +76,36 @@ async function monitor() {
       if (!ok) permissionCount++;
     }
     console.log(`- Tabelas bloqueadas:  ${permissionCount}/${eav94Tables.length} ${permissionCount > 0 ? '🔴' : '🟢'}`);
-    
+
     const docItemIdx = await pool.query(`
       SELECT indexname FROM pg_indexes 
       WHERE schemaname = 'wshop' AND tablename = 'docitem' AND indexname = 'idx_docitem_idpessoa'
     `).then(r => r.rowCount > 0).catch(() => false);
     console.log(`- Index docitem_idp:   ${docItemIdx ? '🟢 OK' : '🔴 MISSING (Slow Dashboard)'}`);
 
-    // 5. ML & Intelligence
-    console.log('\n[🧠] Inteligência & ML Coverage:');
-    const churnCount = await ecoPool.query('SELECT COUNT(*) FROM ml_churn_risk');
-    const affinityCount = await ecoPool.query('SELECT COUNT(*) FROM ml_product_affinity');
-    console.log(`- Churn Risk Model:    ${churnCount.rows[0].count} scores active`);
-    console.log(`- Product Affinity:    ${affinityCount.rows[0].count} relations active`);
+    // 5. Sentiment Pulse (Phase 6)
+    console.log('\n[💬] Pulso de Sentimento (Base Piloto):');
+    const sentiment = await ecoPool.query(`
+      SELECT sentiment_label, COUNT(*) as count, AVG(sentiment_score) as avg_score
+      FROM ml_client_sentiment GROUP BY 1
+    `);
+    const totalSent = sentiment.rows.reduce((a, b) => a + parseInt(b.count), 0);
+    sentiment.rows.forEach(r => {
+      const pct = ((r.count / totalSent) * 100).toFixed(1);
+      const icon = r.sentiment_label === 'POSITIVE' ? '🟢' : (r.sentiment_label === 'NEGATIVE' ? '🔴' : '⚪');
+      console.log(`- ${icon} ${r.sentiment_label.padEnd(10)}: ${r.count} (${pct}%) | Score: ${parseFloat(r.avg_score).toFixed(2)}`);
+    });
+
+    // 6. ML & Intelligence Freshness
+    console.log('\n[🧠] Saude da Inteligencia (Freshness):');
+    const driftRes = await ecoPool.query('SELECT MAX(calculado_em) as last_calc FROM ml_churn_risk');
+    const dbAge = driftRes.rows[0].last_calc ? (new Date() - driftRes.rows[0].last_calc) / (1000 * 60 * 60) : 999;
+
+    const churnFile = path.join(process.cwd(), 'ml_data', 'ml_churn_training.csv');
+    const csvAge = fs.existsSync(churnFile) ? (new Date() - fs.statSync(churnFile).mtime) / (1000 * 60 * 60) : 999;
+
+    console.log(`- Inference (DB):      ${dbAge.toFixed(1)}h de idade ${dbAge > 24 ? '🔴' : '🟢'}`);
+    console.log(`- Extraction (CSV):   ${csvAge.toFixed(1)}h de idade ${csvAge > 2 ? '🔴 (EAV-118)' : '🟢'}`);
 
     console.log('\n----------------------------------------------------');
     console.log('Monitoramento concluido.');
