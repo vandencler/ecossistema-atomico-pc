@@ -1,3 +1,11 @@
+
+const cwd = process.cwd();
+if (!cwd.toLowerCase().includes("-pc")) {
+    console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
+    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    process.exit(1);
+}
+
 const { ecoPool } = require('../src/main/db');
 
 async function generateRetentionHooks() {
@@ -41,13 +49,14 @@ async function generateRetentionHooks() {
         // Boost affinity score and mark as CHURN_REVERSAL_HOOK
         const boostedScore = Math.min(100, core.affinity_score + 10);
         await client.query(`
-          INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code, pitch)
+          VALUES ($1, $2, $3, $4, $5)
           ON CONFLICT (idpessoa, idproduto) DO UPDATE SET
             affinity_score = GREATEST(ml_product_affinity.affinity_score, EXCLUDED.affinity_score),
             reason_code = 'CHURN_REVERSAL_HOOK',
+            pitch = EXCLUDED.pitch,
             calculado_em = CURRENT_TIMESTAMP
-        `, [idpessoa, core.idproduto, boostedScore, 'CHURN_REVERSAL_HOOK']);
+        `, [idpessoa, core.idproduto, boostedScore, 'CHURN_REVERSAL_HOOK', 'Temos uma oferta especial para você repor seu produto favorito!']);
         hookCount++;
       }
     }

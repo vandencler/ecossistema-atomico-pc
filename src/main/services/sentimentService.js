@@ -8,8 +8,8 @@ const { logError, logEvent } = require('./logService');
  */
 class SentimentService {
   constructor() {
-    this.negWords = ['lento', 'travando', 'erro', 'ruim', 'dificil', 'bug', 'parou', 'problema', 'pessimo', 'atraso', 'falha', 'horrível', 'limitado', 'confuso', 'complicado'];
-    this.posWords = ['rapido', 'facil', 'ajudou', 'bom', 'parabens', 'top', 'otimo', 'excelente', 'vendi', 'sucesso', 'amando', 'perfeito', 'incrível', 'parabéns', 'agilidade'];
+    this.negWords = ['lento', 'travando', 'erro', 'ruim', 'dificil', 'bug', 'parou', 'problema', 'pessimo', 'atraso', 'falha', 'horrível', 'limitado', 'confuso', 'complicado', 'caro', 'absurdo', 'demora', 'insatisfeito', 'errado', 'mentira', 'engano', 'horrivel', 'pior', 'desistindo', 'cansado', 'reclamar', 'nao funciona', 'não funciona', 'parado', 'trancado', 'bloqueado'];
+    this.posWords = ['rapido', 'facil', 'ajudou', 'bom', 'parabens', 'top', 'otimo', 'excelente', 'vendi', 'sucesso', 'amando', 'perfeito', 'incrível', 'parabéns', 'agilidade', 'recomendo', 'gostei', 'amei', 'obrigado', 'show', 'show de bola', 'eficiente', 'maravilhoso', 'sensacional', 'parabens', 'top demais', 'ajuda muito', 'facilitou', 'venda concluida'];
   }
 
   /**

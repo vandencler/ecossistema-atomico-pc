@@ -140,8 +140,8 @@ class IntelligenceService {
    * @param {Object} data - Client and action data.
    * @returns {number} - Priority score (0-100).
    */
-  async calculatePriority(data) {
-    const abGroup = this._getABGroup(data.idpessoa);
+  async calculatePriority(data, forcedGroup = null) {
+    const abGroup = forcedGroup || this._getABGroup(data.idpessoa);
     let score = this.config.baseScore || 30;
 
     // 1. ABC Class Bonus
@@ -291,6 +291,7 @@ class IntelligenceService {
       else if (rec.reason_code === 'HIGH_HISTORICAL_VOLUME') prefix = 'Alto Volume';
       
       insights.push(`${prefix}: Alta afinidade com produto ${rec.idproduto} 🎯`);
+      if (rec.pitch) insights.push(`Dica: "${rec.pitch}"`);
     }
 
     if (stats.valor_lifetime > 5000) {
@@ -309,7 +310,7 @@ class IntelligenceService {
   async getProductRecommendations(idpessoa, limit = 5) {
     try {
       const res = await ecoPool.query(`
-        SELECT idproduto, affinity_score, reason_code
+        SELECT idproduto, affinity_score, reason_code, pitch
         FROM ml_product_affinity
         WHERE idpessoa = $1
         ORDER BY affinity_score DESC
@@ -322,7 +323,7 @@ class IntelligenceService {
       try {
         const db = getLocalDb();
         const rows = db.prepare(`
-          SELECT idproduto, affinity_score, reason_code
+          SELECT idproduto, affinity_score, reason_code, pitch
           FROM ml_product_affinity
           WHERE idpessoa = ?
           ORDER BY affinity_score DESC

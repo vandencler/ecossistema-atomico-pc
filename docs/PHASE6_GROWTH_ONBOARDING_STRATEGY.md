@@ -57,11 +57,16 @@ Utilizaremos a infraestrutura de `OmnichannelService` para enviar uma mensagem a
 - **Engajamento SAV:** Volume de sugestões de correção enviadas (indicador de confiança no sistema).
 - **Latency Sentiment:** Monitoramento de reclamações sobre lentidão (alinhado com o dashboard do CTO).
 
-## 5. Próximos Passos (Ações Imediatas)
-1. **Aprovação CEO:** Submeter este plano para revisão.
-2. **Criação de Conteúdo:** Produzir o Guia Rápido em PDF.
-3. **Setup de Boas-Vindas:** Configurar a mensagem de boas-vindas no serviço de WhatsApp.
-4. **Link de Suporte:** Adicionar link para o Wiki/FAQ diretamente na aba 'Configurações' do app.
+## 5. Ativos de Comunicação (Fase 6)
+- **Pílulas de Conhecimento:** Templates de WhatsApp para Multiplicadores (ver `onboarding/PILULAS_CONHECIMENTO.md`).
+- **Comunicado de Lançamento:** Dicas de uso e boas-vindas (ver `onboarding/COMUNICADO_LANCAMENTO.md`).
+- **Guia Rápido & FAQ:** Disponíveis offline dentro do aplicativo.
+
+## 6. Próximos Passos (Ações Imediatas)
+1. **[CONCLUÍDO] Setup de Boas-Vindas:** Configuração de `omni_welcome_message`.
+2. **[CONCLUÍDO] Links de Suporte:** Botões integrados na aba 'Configurações'.
+3. **Rollout (Segunda 08h00):** Disparo do Welcome Pack para os 10 Multiplicadores.
+4. **Monitoramento:** Acompanhamento via `check_feedback.js` e Dashboard de Sentimento.
 
 ---
 *Assinado: CMO, Ecossistema Atômico*

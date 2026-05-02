@@ -1,3 +1,9 @@
+
+const cwd = process.cwd();
+if (!cwd.toLowerCase().includes("-pc")) {
+    console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
+    process.exit(1);
+}
 const { Pool } = require('pg');
 const fs = require('fs');
 async function test() {
@@ -11,7 +17,7 @@ async function test() {
             password: config.databases.mirror.password,
             connectionTimeoutMillis: 2000
         });
-        const tables = ['wshop.documen', 'wshop.docitem', 'wshop.produto', 'wshop.tabelaprecos', 'wshop.movcaix', 'wshop.ranking_calculadoloja'];
+        const tables = ['wshop.pessoas', 'wshop.crediar', 'wshop.documen', 'wshop.docitem', 'wshop.produto', 'wshop.tabelaprecos', 'wshop.movcaix', 'wshop.ranking_calculadoloja'];
         console.log(`Checking permissions for ${config.databases.mirror.user}...`);
         for (const table of tables) {
             try {

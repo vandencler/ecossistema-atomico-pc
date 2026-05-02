@@ -106,5 +106,23 @@
     "priority": "high",
     "description": "Once EAV-107 is validated and performance targets (<100ms) are met, lift the feature freeze and publish Phase 6 strategy.",
     "notes": "Completed by CEO directive"
+  },
+  {
+    "id": "EAV-140",
+    "title": "CTO: Pilot Technical Monitoring and Infrastructure Hardening",
+    "assignee": "CTO",
+    "status": "todo",
+    "priority": "critical",
+    "description": "Execute monitor_pilot.js, verify max_connections (EAV-94), and ensure dashboard performance.",
+    "notes": "Directive issued in DIRECTIVES_2026-05-02.md"
+  },
+  {
+    "id": "EAV-141",
+    "title": "CMO: Pilot Onboarding Rollout (Monday 08:00 AM)",
+    "assignee": "CMO",
+    "status": "todo",
+    "priority": "high",
+    "description": "Execute Monday 08:00 AM WhatsApp Welcome Pack rollout to 10 power users and audit sentiment feedback.",
+    "notes": "Directive issued in DIRECTIVES_2026-05-02.md"
   }
 ]

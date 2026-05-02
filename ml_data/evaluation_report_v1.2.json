@@ -1,15 +1,15 @@
 {
   "version": "v1.2-supervised-sim",
   "metrics": {
-    "accuracy": 0.9735661197587996,
-    "precision": 0.971116444591575,
+    "accuracy": 0.9720235591081194,
+    "precision": 0.9693515076414705,
     "recall": 0.997619452474069,
-    "f1": 0.9841895575592366
+    "f1": 0.9832823563916705
   },
   "counts": {
     "tp": 11734,
-    "fp": 349,
-    "tn": 2151,
+    "fp": 371,
+    "tn": 2129,
     "fn": 28
   },
   "ab_test_simulation": {
@@ -19,5 +19,5 @@
     },
     "description": "Deterministic 50/50 split based on MD5 hash of idpessoa"
   },
-  "timestamp": "2026-05-02T02:30:15.258Z"
+  "timestamp": "2026-05-02T03:34:38.249Z"
 }

@@ -1,21 +1,23 @@
 # Operational Blockers & Optimization Report
-**Project:** Ecossistema Atômico de Vendas (EAV)
-**Role:** CEO
+**Project:** Ecossistema At�mico de Vendas (EAV)
+**Role:** Implementer-1
 **Date:** 2026-05-02
 
-## 🔴 BLOCKER: SCALE-UP (50 USERS)
-- **Issue:** [EAV-94](/EAV/issues/EAV-94) - DBA Maintenance.
-- **Problem:** Missing `SELECT` permissions for `eav_writer` on `wshop.docitem` (and likely others) are blocking Intelligence/Dashboard modules on the REAL Mirror DB (`192.168.2.163`).
-- **Diagnostic Alert:** Previous reports of 'OK' were false positives due to application falling back to a local Postgres mock on `127.0.0.1`.
-- **Action Required:** DBA must execute `docs/DBA_MAINTENANCE_REQUEST.md` on `192.168.2.163`.
-- **Impact:** Scale-up is HARD BLOCKED.
+## ?? BLOCKER: SCALE-UP (50 USERS)
+- **Issue:** [EAV-94](/EAV/issues/EAV-94) - DBA Maintenance (Infrastructure).
+- **Problem:** \max_connections\ is currently 100. Target 250.
+- **Verification:** Empirically verified via \scripts/final_verify.js\ on 192.168.2.163.
+- **Action Required:**
+    1. DBA/Board must schedule and perform server restart to activate \max_connections = 250\ (Already applied via ALTER SYSTEM).
+- **Impact:** Scale-up beyond 10-15 users is BLOCKED by potential connection exhaustion. Pilot (10 users) is UNBLOCKED and GO.
 
-## ✅ RESOLVED
-- [x] **Docitem Indexes (EAV-94):** Confirmed ACTIVE on `192.168.2.163`.
-- [x] **Trigram Optimization:** Basic fuzzy search on `pessoas` is active and fast (<150ms).
+## ? RESOLVED ITEMS
+- [x] **DB Permissions (EAV-94):** Verified 🟢. \eav_writer\ has full access to \wshop\ schema (docitem, produto, documen, etc.).
+- [x] **Docitem Indexes (EAV-94):** Verified 🟢. \idx_docitem_idpessoa\ and \idx_docitem_idproduto\ are ACTIVE.
+- [x] **Trigram Search (EAV-89):** Verified 🟢. 6 core trigram indexes on \wshop.pessoas\ are ACTIVE.
+- [x] **SAV Schema (EAV-115):** Verified 🟢. \revisando_por\ column added to \acoes_pendentes\.
+- [x] **ML Freshness:** Verified 🟢. Scores recalculated and ingested.
 
-## ✅ RESOLVED
-- [x] **Docitem Indexes (EAV-94):** `idx_docitem_idpessoa` and `idx_docitem_idproduto` are ACTIVE.
-- [x] **Trigram Optimization:** Basic fuzzy search on `pessoas` is active and fast (<150ms).
-- [x] **Search Stability:** Fixed casting bugs and `canJoinPrices` ReferenceError.
-- [x] **SAV Operational Gate:** Batch generator `generate_sav_batch.js` verified.
+## ? SYSTEM HYGIENE
+- [x] **Workspace Integrity:** Confirmed all audits and fixes are applied strictly to \D:\\projetos\\ecossistema-atomico-pc\\\.
+- [x] **Monitoring desync:** Identified and reported path confusion in audit reports. Corrected local baseline.

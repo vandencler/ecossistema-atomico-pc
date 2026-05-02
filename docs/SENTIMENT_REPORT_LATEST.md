@@ -1,22 +1,22 @@
 # RelatÃ³rio de Sentimento e Engajamento (Fase 6)
-**Data:** 01/05/2026
+**Data:** 02/05/2026
 **VersÃ£o:** v2.0-CMO (EAV-113 Ready)
 
 ## 1. MÃ©tricas de SatisfaÃ§Ã£o Principal (NPS)
 O Net Promoter Score (NPS) Ã© coletado automaticamente via WhatsApp 48h apÃ³s o primeiro uso do sistema.
 
 *   **NPS Atual:** 100
-*   **MÃ©dia das Notas:** 9.0 / 10
-*   **Total de Pesquisas Enviadas:** 9
-*   ðŸ˜Š **Promotores (9-10):** 4
+*   **MÃ©dia das Notas:** 9.2 / 10
+*   **Total de Pesquisas Enviadas:** 10
+*   ðŸ˜Š **Promotores (9-10):** 5
 *   ðŸ˜¡ **Detratores (0-6):** 0
 
 ## 2. AnÃ¡lise de Sentimento (Textual/ML)
 AnÃ¡lise de linguagem natural sobre mensagens recebidas via WhatsApp.
 
-*   **eNPS (Internal Sentiment):** -28.6 
-*   **Sentimento MÃ©dio:** -0.29 (-1 a +1)
-*   **InteraÃ§Ãµes Analisadas:** 7
+*   **eNPS (Internal Sentiment):** -25.0 
+*   **Sentimento MÃ©dio:** -0.25 (-1 a +1)
+*   **InteraÃ§Ãµes Analisadas:** 8
 
 ## 3. Feedback Manual (In-App)
 Feedbacks enviados pelos representantes diretamente pela interface do EAV.

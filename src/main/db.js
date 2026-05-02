@@ -74,6 +74,41 @@ ecoPoolBase.on('error', (err) => {
 const mirrorThrottler = new Throttler('MIRROR', settings.throttleMirror, 15);
 const ecoThrottler = new Throttler('ECOSYSTEM', settings.throttleEco, 30);
 
+
+// Proxy wrapper to track slow queries
+function createPoolProxy(poolInstance, label) {
+  return new Proxy(poolInstance, {
+    get(target, prop) {
+      const value = target[prop];
+      if (typeof value === 'function' && prop === 'query') {
+        return async (...args) => {
+          const start = Date.now();
+          try {
+            const res = await value.apply(target, args);
+            const duration = Date.now() - start;
+
+            if (duration > 100 && process.env.NODE_ENV !== 'test') {
+              try {
+                // Late require to avoid circular dependencies
+                const { trackEvent } = require('./services/telemetryService');
+                trackEvent('SLOW_QUERY', 'system', {
+                  duration,
+                  pool: label,
+                  sql: typeof args[0] === 'string' ? args[0].trim().slice(0, 150) : 'object_query'
+                }).catch(() => {});
+              } catch (e) { /* ignore telemetry errors */ }
+            }
+            return res;
+          } catch (err) {
+            throw err;
+          }
+        };
+      }
+      return value;
+    }
+  });
+}
+
 const pool = {
   query: (text, params) => mirrorThrottler.run(() => mirrorPool.query(text, params)),
   connect: () => mirrorPool.connect(),
@@ -88,8 +123,11 @@ const ecoPool = {
   throttler: ecoThrottler
 };
 
+const proxiedPool = createPoolProxy(pool, 'mirror');
+const proxiedEcoPool = createPoolProxy(ecoPool, 'ecosystem');
+
 module.exports = {
-  pool,
-  ecoPool,
+  pool: proxiedPool,
+  ecoPool: proxiedEcoPool,
   settings
 };

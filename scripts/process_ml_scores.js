@@ -1,3 +1,11 @@
+
+const cwd = process.cwd();
+if (!cwd.toLowerCase().includes("-pc")) {
+    console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
+    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    process.exit(1);
+}
+
 const fs = require('fs');
 const path = require('path');
 const { ecoPool } = require('../src/main/db');
@@ -116,23 +124,27 @@ async function processAffinityScores() {
       const qty = parseFloat(qtd_total || 0);
       let affinityScore = Math.min(100, (qty * 7.5)); 
       let reasonCode = 'BOUGHT_PREVIOUSLY';
+      let pitch = 'Produto já comprado por você anteriormente.';
       
       if (qty > 20) {
         reasonCode = 'CORE_PRODUCT';
         affinityScore = Math.min(100, affinityScore + 15);
+        pitch = 'Um dos seus produtos mais comprados (Essencial).';
       } else if (qty > 10) {
         reasonCode = 'HIGH_HISTORICAL_VOLUME';
         affinityScore = Math.min(100, affinityScore + 5);
+        pitch = 'Você compra este produto com frequência.';
       }
 
       await client.query(`
-        INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code, pitch)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (idpessoa, idproduto) DO UPDATE SET
           affinity_score = EXCLUDED.affinity_score,
           reason_code = EXCLUDED.reason_code,
+          pitch = EXCLUDED.pitch,
           calculado_em = CURRENT_TIMESTAMP
-      `, [idpessoa, idproduto, affinityScore, reasonCode]);
+      `, [idpessoa, idproduto, affinityScore, reasonCode, pitch]);
     }
 
     await client.query('COMMIT');

@@ -8,11 +8,10 @@
 - Onboarding materials (FAQ, Quick Guide, Welcome Pack) are 100% ready.
 - **Action:** Rollout confirmed for Monday 08:00 AM.
 
-### 2. Scale-up (50 Users) - [RED]
-- **Blocked by EAV-94.** 
-- We cannot safely add 40 more users without increasing `max_connections` to 250.
-- `eav_writer` permission regression on `docitem` is a showstopper for the Dashboard feature.
-- **Request:** Board must execute the SQL payload for EAV-94 on the Mirror DB (192.168.2.163).
+### 2. Scale-up (50 Users) - [AMBER]
+- **Partially Unblocked:** `eav_writer` permissions on `docitem`, `documen`, and `produto` have been **RESTORED**. The Intelligence Engine is back to 100% freshness.
+- **Remaining Blocker (EAV-94):** `max_connections` remains at 100. Expansion to 50 users requires a DB restart to activate the 250 limit.
+- **Request:** Board must finalize the maintenance restart for EAV-94 on the Mirror DB (192.168.2.163).
 
 ### 3. UX & Quality
 - Sidebar "disappearing" is being addressed by increasing revalidation frequency and hardening state management.

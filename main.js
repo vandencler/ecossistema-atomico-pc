@@ -92,7 +92,7 @@ function createWindow() {
     backgroundColor: '#0a0e1a',
     resizable: false,
     movable: false,
-    skipTaskbar: false,
+    skipTaskbar: true,
     alwaysOnTop: true,
     hasShadow: false,
     webPreferences: {
@@ -406,27 +406,34 @@ app.whenReady().then(async () => {
   setupRealTimeListener();
 
   // 5. Periodic Maintenance
-  warmUpCache();
-  setInterval(() => warmUpCache(), 7200000); // 2h
+  // Stagger background tasks to avoid connection spikes on startup
+  const staggerDelay = Math.floor(Math.random() * 600000); // Up to 10 minutes
+  
+  setTimeout(() => {
+    warmUpCache();
+    setInterval(() => warmUpCache(), 7200000); // 2h
+  }, staggerDelay);
+
   setInterval(() => checkHealth(), 1800000); // 30m
   setInterval(() => reconcileCorrections(), 43200000); // 12h
   setInterval(() => flushTelemetry(), 900000); // 15m
-  setInterval(() => bulkIntelligenceService.runSweep(), 21600000); // 6h
   setInterval(() => npsService.runCycle(), 43200000); // 12h
   setInterval(() => uiService.revalidateBounds(), 5000); // 1m check
 
-  // 6. Check for OTA Updates and run initial sweep
+  // 6. Check for OTA Updates
   setTimeout(() => {
     autoUpdater.checkForUpdatesAndNotify();
-  }, 10000); // Wait 10 seconds after boot to check for updates
+  }, 10000);
 
+  // Stagger Intelligence Sweep even more
   setTimeout(() => {
     bulkIntelligenceService.runSweep();
-  }, 30000); // Initial sweep 30s after ready
+    setInterval(() => bulkIntelligenceService.runSweep(), 21600000); // 6h
+  }, staggerDelay + 300000); // 5 minutes after warm-up
 
   setTimeout(() => {
     npsService.runCycle();
-  }, 60000); // Initial NPS check 1m after ready
+  }, staggerDelay + 600000); // 10 minutes after warm-up
 });
 
 app.on('before-quit', async () => {

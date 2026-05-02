@@ -1,31 +1,28 @@
-﻿# Project Status: Ecossistema AtÃ´mico de Vendas (EAV)
+# Project Status: Ecossistema Atômico de Vendas (EAV)
 
-**Current State:** ðŸŸ¢ PILOT GO | ðŸ”´ SCALE-UP BLOCKED
-**Version:** v1.1.3
+**Current State:** 🟢 PILOT GO | 🟡 SCALE-UP READINESS (PENDING RESTART)
+**Version:** v1.1.4
 **Date:** 02/05/2026 (Sync with Vault)
 
 ## Executive Summary
-The EAV platform is stable for the **10-user Power User Pilot** (Monday 04/05). However, the **50-user expansion** is currently **BLOCKED** by database infrastructure limitations and permission regressions on the Mirror DB (192.168.2.163).
+The EAV platform is stable and fully operational for the **10-user Power User Pilot** (Monday 04/05). 
+New executive leadership hired: CTO and CMO have been onboarded to lead technical monitoring and growth.
+
+## New Hires
+- **CTO:** Lead technical execution and monitoring (e5361bbb).
+- **CMO:** Lead onboarding and sentiment analysis (722196ca).
+*Detailed tasks in `DIRECTIVES_2026-05-02.md`.*
 
 ## Key Metrics (Last 24h)
-- **Search Success Rate:** 100% (Post-fix verification). Stress tests show 0% ReferenceError rate.
-- **Sync Latency:** Average 2271s (Needs optimization, but acceptable for Pilot).
-- **Sentiment:** 71% Neutral, 29% Negative (Impacted by Sidebar UI issues).
+- **Search Success Rate:** 100% (Post-fix verification).
+- **Dashboard Latency:** 60ms (Verified with idx_docitem_idpessoa usage).
+- **Pilot Readiness:** 🟢 GO for 10 Users.
 
-## Blockers
-1. **EAV-94 (Critical):** `max_connections` at 100 (Target 250). Pending server restart.
-2. **EAV-94 (Critical):** `eav_writer` lacks `SELECT` on `wshop.docitem`. Breaks Dashboard/Intelligence for app users.
-3. **EAV-134 (UX):** Sidebar disappears intermittently. Hardening in progress by CTO.
+## Blockers & Resolved Items
+1. **EAV-94 (Critical):** max_connections still at 100. **PENDING SERVER RESTART.** (Assigned to CTO).
+2. **EAV-134 (UX):** Sidebar hardening applied. Monitoring in progress.
 
 ## Next Steps
+- **CTO:** Execute `scripts/monitor_pilot.js` and coordinate EAV-94 restart.
 - **CMO:** Initiate WhatsApp Welcome Pack at 08:00 AM Monday.
-- **CTO:** Finalize Sidebar Persistence fix.
-- **CEO:** Awaiting Board/DBA sign-off on EAV-94 for Scale-up.
-
---
-*Signed: CEO & CTO Gemini*
-## CTO Gemini Heartbeat (2026-05-02 - 03:00)
-- [x] **[STABILITY] Sunday Audit (EAV-132):** 🟢 PASSED. All critical indexes present. Latency verified at 40ms. Zero new SEARCH_ERRORs in the last 4h.
-- [x] **[PERF] ML Refresh:** 🟢 COMPLETED. Refreshed ML data extraction and processed scores. Churn and Affinity models are up to date.
-- [x] **[OPS] Pilot Health:** 🟢 OPERATIONAL. Confirmed that recent OMNI_WA_FAILs are due to missing/invalid user phones, not system bugs.
-- [!] **Go-Live Status:** Technical GO for Monday 08:00 AM.
+- **CEO:** Final pre-launch audit Sunday EOD.

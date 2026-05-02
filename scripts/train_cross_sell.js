@@ -1,3 +1,11 @@
+
+const cwd = process.cwd();
+if (!cwd.toLowerCase().includes("-pc")) {
+    console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
+    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    process.exit(1);
+}
+
 const fs = require('fs');
 const path = require('path');
 const { ecoPool } = require('../src/main/db');
@@ -126,13 +134,14 @@ async function trainCrossSellRules() {
       for (const [idprod_rec, weight] of topRecs) {
         const finalScore = Math.min(98, weight * 100);
         await client.query(`
-          INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO ml_product_affinity (idpessoa, idproduto, affinity_score, reason_code, pitch)
+          VALUES ($1, $2, $3, $4, $5)
           ON CONFLICT (idpessoa, idproduto) DO UPDATE SET
             affinity_score = GREATEST(ml_product_affinity.affinity_score, EXCLUDED.affinity_score),
             reason_code = CASE WHEN EXCLUDED.affinity_score > ml_product_affinity.affinity_score THEN EXCLUDED.reason_code ELSE ml_product_affinity.reason_code END,
+            pitch = CASE WHEN EXCLUDED.affinity_score > ml_product_affinity.affinity_score OR ml_product_affinity.pitch IS NULL THEN EXCLUDED.pitch ELSE ml_product_affinity.pitch END,
             calculado_em = CURRENT_TIMESTAMP
-        `, [idp, idprod_rec, finalScore, 'CROSS_SELL_BOUGHT_TOGETHER']);
+        `, [idp, idprod_rec, finalScore, 'CROSS_SELL_BOUGHT_TOGETHER', 'Comprado frequentemente por clientes com perfil similar ao seu.']);
         recCount++;
       }
     }
