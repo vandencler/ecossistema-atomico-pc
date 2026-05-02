@@ -71,7 +71,7 @@ test('searchClient - should use granular indexMap for % vs LIKE', async () => {
   await searchClient('joao');
 
   // nmpessoa has index, should use %
-  assert.ok(capturedSql.includes('LOWER(p.nmpessoa) %'));
+  assert.ok(capturedSql.includes('p.nmpessoa %'));
   // nmcurto has NO index, should use LIKE
   assert.ok(capturedSql.includes('LOWER(p.nmcurto) LIKE'));
   // cdchamada has index, should use %

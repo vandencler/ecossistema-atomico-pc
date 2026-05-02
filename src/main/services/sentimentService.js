@@ -1,4 +1,4 @@
-const { ecoPool } = require('../db');
+﻿const { ecoPool } = require('../db');
 const { logError, logEvent } = require('./logService');
 
 /**
@@ -8,25 +8,33 @@ const { logError, logEvent } = require('./logService');
 class SentimentService {
   constructor() {
     this.negWords = ['lento', 'travando', 'erro', 'ruim', 'dificil', 'bug', 'parou', 'problema', 'pessimo', 'atraso'];
-    this.posWords = ['rapido', 'facil', 'ajudou', 'bom', 'parabens', 'top', 'otimo', 'excelente', 'vendi', 'sucesso'];
+    this.posWords = ['rapido', 'facil', 'ajudou', 'bom', 'parabens', 'top', 'otimo', 'excelente', 'vendi', 'sucesso', 'sensacional', 'maravilha', 'show'];
+  }
+
+  /**
+   * Normalizes text by removing accents and making it lowercase.
+   */
+  normalize(text) {
+    if (!text) return '';
+    return text.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
   }
 
   /**
    * Analyzes a single message and updates the client sentiment record.
-   * @param {string} idpessoa - Client identity.
-   * @param {string} content - Message text.
    */
   async analyzeMessage(idpessoa, content) {
     if (!content) return;
-    const msg = content.toLowerCase();
+    const msg = this.normalize(content);
 
     let negHits = 0;
     let posHits = 0;
 
-    this.negWords.forEach(w => { if (msg.includes(w)) negHits++; });
-    this.posWords.forEach(w => { if (msg.includes(w)) posHits++; });
+    this.negWords.forEach(w => { if (msg.includes(this.normalize(w))) negHits++; });
+    this.posWords.forEach(w => { if (msg.includes(this.normalize(w))) posHits++; });
 
-    if (negHits === 0 && posHits === 0) return; // No keywords found, don't update score yet
+    if (negHits === 0 && posHits === 0) return;
 
     let score = 0;
     if (negHits > posHits) {
@@ -42,8 +50,8 @@ class SentimentService {
         INSERT INTO ml_client_sentiment (idpessoa, sentiment_score, sentiment_label, last_message_at)
         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
         ON CONFLICT (idpessoa) DO UPDATE SET
-          sentiment_score = (ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0, -- Moving average
-          sentiment_label = CASE 
+          sentiment_score = (ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0,
+          sentiment_label = CASE
             WHEN ((ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0) < -0.2 THEN 'NEGATIVE'
             WHEN ((ml_client_sentiment.sentiment_score + EXCLUDED.sentiment_score) / 2.0) > 0.2 THEN 'POSITIVE'
             ELSE 'NEUTRAL'
@@ -55,21 +63,16 @@ class SentimentService {
       await logEvent('ML_SENTIMENT_UPDATED', idpessoa, `Sentiment analyzed: ${label} (score: ${score})`);
     } catch (e) {
       await logError('ML_SENTIMENT_ANALYSIS', e, idpessoa);
-      console.error('[SENTIMENT] Error updating sentiment:', e.message);
     }
   }
 
-  /**
-   * Batch analyze all recent inbound messages.
-   * Migrated from scripts/analyze_sentiment.js
-   */
   async batchAnalyze() {
     console.log('[SENTIMENT] Running batch analysis...');
     try {
       const res = await ecoPool.query(`
         SELECT idpessoa, conteudo, criado_em
         FROM omnichannel_mensagens
-        WHERE direcao = 'INBOUND' AND status = 'RECEIVED'
+        WHERE direcao = 'INBOUND'
         ORDER BY criado_em ASC
       `);
 

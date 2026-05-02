@@ -42,8 +42,8 @@ async function testWhatsAppScoring() {
   console.log(`Score after Inbound: ${inboundScore} (Expected: ~${initialScore + 15})`);
 
   // Cleanup
-  await ecoPool.query("DELETE FROM omnichannel_mensagens WHERE idpessoa = $1", [idpessoa]);
-  await ecoPool.query("DELETE FROM clientes_enriquecidos WHERE idpessoa = $1", [idpessoa]);
+  await ecoPool.query('DELETE FROM omnichannel_mensagens WHERE idpessoa = $1', [idpessoa]);
+  await ecoPool.query('DELETE FROM clientes_enriquecidos WHERE idpessoa = $1', [idpessoa]);
   
   if (inboundScore > outboundScore && outboundScore > initialScore) {
     console.log('✅ WhatsApp Scoring Integration Verified!');

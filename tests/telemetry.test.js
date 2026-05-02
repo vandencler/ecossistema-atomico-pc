@@ -47,8 +47,16 @@ test('TelemetryService - trackEvent and bulk flush', async () => {
   
   // Verify multi-row insert (even for 1 row, it uses the new syntax)
   assert.ok(capturedSql.includes('INSERT INTO telemetry_events'));
-  assert.ok(capturedSql.includes('VALUES ($1, $2, $3, $4, $5)'));
+  assert.ok(capturedSql.includes('VALUES ($1::text, $2::text, $3::jsonb, $4::timestamptz, $5::uuid)'));
   assert.strictEqual(capturedParams[0], 'test_event');
   assert.strictEqual(capturedParams[1], 'user1');
   assert.deepStrictEqual(capturedParams[2], { foo: 'bar' });
+
+  // 2. Test auto-identity fallback
+  telemetryService.setIdentity('test-identity');
+  await telemetryService.trackEvent('auto_event', 'auto', { detail: 'fallback' });
+  await new Promise(resolve => setImmediate(resolve));
+  
+  assert.strictEqual(capturedParams[0], 'auto_event');
+  assert.strictEqual(capturedParams[1], 'test-identity');
 });
