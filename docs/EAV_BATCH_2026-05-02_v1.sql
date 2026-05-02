@@ -1,0 +1,1 @@
+-- Nenhum item sincronizado pendente de exportacao ERP.

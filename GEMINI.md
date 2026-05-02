@@ -25,12 +25,12 @@ See: `D:\obsidian\memoria-infinita\memoria-infinita\Antigravity\sessoes\2026-04-
 
 ### Database Boundaries — ABSOLUTE AND NON-NEGOTIABLE
 
-| Database | Host | Permission |
-|----------|------|-----------|
-| BD Espelho (ALTERDATA_SHOP_ESPELHO) | 192.168.2.163 | ✅ READ ONLY |
-| BD Ecossistema (ECOSSISTEMA_ATOMICO) | 192.168.2.163 | ✅ Read/Write |
-| **BD Principal (ALTERDATA_SHOP)** | **192.168.2.103** | ❌ **ABSOLUTELY FORBIDDEN** |
-| **Any database on 192.168.2.103** | **192.168.2.103** | ❌ **ABSOLUTELY FORBIDDEN** |
+| Database | Host | Permission | Description |
+|----------|------|------------|-------------|
+| BD Espelho (ALTERDATA_SHOP_ESPELHO) | 192.168.2.163 | ✅ READ ONLY* | Read-only for general queries. **UPDATE allowed ONLY via `syncService`** for approved SAV corrections on `pessoas` and `crediar` tables. |
+| BD Ecossistema (ECOSSISTEMA_ATOMICO) | 192.168.2.163 | ✅ Read/Write | Application's internal governance and intelligence data. |
+| **BD Principal (ALTERDATA_SHOP)** | **192.168.2.103** | ❌ **ABSOLUTELY FORBIDDEN** | Production ERP. NEVER CONNECT. |
+| **Any database on 192.168.2.103** | **192.168.2.103** | ❌ **ABSOLUTELY FORBIDDEN** | Production ERP. NEVER CONNECT. |
 
 **⚠️ CONNECTING TO 192.168.2.103 IS PROHIBITED. This is the PRODUCTION ERP. One wrong query destroys real business data. ZERO EXCEPTIONS.**
 

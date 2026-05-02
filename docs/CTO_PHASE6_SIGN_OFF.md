@@ -11,7 +11,7 @@ The EAV platform (v1.1.2) has been rigorously tested and hardened to support the
 The following scaling optimizations have been verified and locked:
 *   **Telemetry Throttling:** Multi-row bulk inserts ensure that 50 users generating simultaneous events will not saturate the Ecosystem database.
 *   **Query Optimization:** Search and Dashboard routines have been stripped of CPU-heavy sequential scans (latency reduced from ~800ms to <10ms per request).
-*   **Dual-Pool Safeties:** The offline SQLite caching architecture inherently protects the central network from heavy read-spikes during peak hours.
+*   **Onboarding Readiness:** Integrated local documentation (FAQ/Guia Rápido) directly into the app's Config module, ensuring offline access to training materials for the 10 Power Users.
 
 ## 2. Deployment Directives
 IT Operations is hereby authorized to distribute the `Ecossistema Atomico Setup 1.1.2.exe` to the target user group.
