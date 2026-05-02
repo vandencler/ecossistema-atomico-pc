@@ -1,4 +1,4 @@
-// const test = require('node:test');
+﻿// const test = require('node:test');
 const assert = require('node:assert');
 const proxyquire = require('proxyquire');
 
@@ -13,7 +13,7 @@ async function testNps() {
     query: async (sql, params) => {
       if (sql.includes('stvendedor = true')) {
         return {
-          rows: [{ idpessoa: testIdPessoa, nmpessoa: 'Vendedor Teste', nrtelefone: '5521988887777', campostelwhatsapp: null }]
+          rows: [{ idpessoa: testIdPessoa, nmpessoa: 'Vendedor Teste', nrtelefone: '5521988887777', campostelwhatsapp: null, nrpager: null }]
         };
       }
       if (sql.includes('SELECT campostelwhatsapp, nrtelefone')) {
@@ -61,7 +61,7 @@ async function testNps() {
     await ecoPool.query('DELETE FROM telemetry_events WHERE user_id = $1', [testUserId]);
     await ecoPool.query(`
       INSERT INTO telemetry_events (event_name, user_id, occurred_at)
-      VALUES ('login', $1, NOW() - INTERVAL '1 hour')
+      VALUES ('APP_LOAD', $1, NOW() - INTERVAL '1 hour')
     `, [testUserId]);
 
     // 2. Run Cycle
@@ -78,10 +78,10 @@ async function testNps() {
     const res = await ecoPool.query('SELECT COUNT(*) as count FROM nps_scores WHERE idpessoa = $1 AND score = 9', [testIdPessoa]);
     assert.strictEqual(parseInt(res.rows[0].count), 1);
 
-    console.log('✅ NPS Verification Success!');
+    console.log('âœ… NPS Verification Success!');
 
   } catch (e) {
-    console.error('❌ NPS Verification Failed:', e.message);
+    console.error('âŒ NPS Verification Failed:', e.message);
     process.exit(1);
   } finally {
     await ecoPool.query('DELETE FROM telemetry_events WHERE user_id = $1', [testUserId]);

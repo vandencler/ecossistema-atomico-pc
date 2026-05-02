@@ -68,7 +68,10 @@ async function flushTelemetry() {
       const ids = pending.map(e => e.id);
       db.prepare(`DELETE FROM telemetry_buffer WHERE id IN (${ids.map(() => '?').join(',')})`).run(ids);
 
-      if (pending.length === 100) setImmediate(() => flushTelemetry());
+      if (pending.length === 100) {
+        // Add a small delay between batches to prevent DB saturation
+        setTimeout(() => flushTelemetry(), 200);
+      }
     } catch (e) {
       console.warn('[TELEMETRY] Sync failed, will retry later:', e.message);
     }

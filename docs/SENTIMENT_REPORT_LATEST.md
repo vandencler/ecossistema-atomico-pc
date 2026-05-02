@@ -7,7 +7,7 @@ O Net Promoter Score (NPS) Ã© coletado automaticamente via WhatsApp 48h apÃ³
 
 *   **NPS Atual:** 100
 *   **MÃ©dia das Notas:** 9.2 / 10
-*   **Total de Pesquisas Enviadas:** 14267
+*   **Total de Pesquisas Enviadas:** 14268
 *   ðŸ˜Š **Promotores (9-10):** 6
 *   ðŸ˜¡ **Detratores (0-6):** 0
 

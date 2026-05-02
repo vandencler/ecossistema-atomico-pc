@@ -88,7 +88,7 @@ async function warmUpCache() {
     // Fetch top 1000 active clients with phone numbers
     const topClients = await pool.query(`
       SELECT p.idpessoa, p.nmpessoa, p.nmcurto, p.nrcgc_cic, p.dtultimacompra,
-             p.nrtelefone, p.campostelwhatsapp
+             p.nrtelefone, p.campostelwhatsapp, p.nrpager
       FROM wshop.pessoas p
       WHERE p.stpessoa != 'E' -- Exclude inactive if needed
       ORDER BY p.dtultimacompra DESC NULLS LAST
@@ -98,9 +98,9 @@ async function warmUpCache() {
     const insert = db.prepare(`
       INSERT OR REPLACE INTO client_cache (
         idpessoa, nmpessoa, nmcurto, nrcgc_cic, dtultimacompra, 
-        nrtelefone, campostelwhatsapp
+        nrtelefone, campostelwhatsapp, nrpager
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const transaction = db.transaction((clients) => {
@@ -112,7 +112,8 @@ async function warmUpCache() {
           client.nrcgc_cic,
           client.dtultimacompra ? new Date(client.dtultimacompra).toISOString() : null,
           client.nrtelefone,
-          client.campostelwhatsapp
+          client.campostelwhatsapp,
+          client.nrpager
         );
       }
     });
@@ -146,13 +147,14 @@ async function searchLocalCache(query) {
       LOWER(COALESCE(nmcurto,'')) LIKE ? OR 
       LOWER(COALESCE(nrcgc_cic,'')) LIKE ? OR 
       LOWER(COALESCE(nrtelefone,'')) LIKE ? OR 
-      LOWER(COALESCE(campostelwhatsapp,'')) LIKE ?
+      LOWER(COALESCE(campostelwhatsapp,'')) LIKE ? OR
+      LOWER(COALESCE(nrpager,'')) LIKE ?
     )`).join(' AND ');
     
     const params = [];
     tokens.forEach(token => {
       const p = `%${token}%`;
-      params.push(p, p, p, p, p);
+      params.push(p, p, p, p, p, p);
     });
 
     const queryLower = `%${query.toLowerCase().trim()}%`;

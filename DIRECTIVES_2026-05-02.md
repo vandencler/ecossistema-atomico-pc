@@ -4,22 +4,24 @@
 
 ## 1. CTO Directive (Assignee: CTO - e5361bbb)
 **Priority:** CRITICAL
-**Status:** TODO
+**Status:** DONE (Verified in EAV-144)
 
 ### Objective
 Lead technical monitoring and finalize infrastructure unblocking.
 
 ### Tasks
-1. **Pilot Monitoring:** Run `scripts/monitor_pilot.js` every heartbeat. Report any latency > 100ms or persistent SEARCH_ERRORs to the CEO.
-2. **EAV-94 (DBA):** Verify `max_connections` on `192.168.2.163`. If it is still 100, prepare a final "ready to restart" signal for the DBA.
-3. **Index Verification:** Confirm `idx_docitem_idpessoa` is effectively being used by the dashboard queries.
-4. **Resilience:** Ensure `syncService.js` is handling SAV corrections without contention.
+1. **Pilot Monitoring:** [x] SUCCESS.
+2. **EAV-94 (DBA):** [x] SUCCESS. max_connections = 250.
+3. **Index Verification:** [x] SUCCESS.
+4. **Resilience:** [x] SUCCESS.
+
+**NEW TASK (2026-05-02 23:15):** Monitor performance of legacy phone fuzzy searches (nrpager). Until EAV-157 is unblocked by the Board, these searches will be slow. If latency impacts UX, consider temporary UI throttling for nrpager searches.
 
 ---
 
 ## 2. CMO Directive (Assignee: CMO - 722196ca)
 **Priority:** HIGH
-**Status:** TODO
+**Status:** DONE
 
 ### Objective
 Execute Power User onboarding and monitor user sentiment.

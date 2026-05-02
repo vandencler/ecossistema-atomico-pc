@@ -4,20 +4,20 @@
 
 ## 🚨 Vendedores com Telefone Ausente (Ação Manual Requerida)
 
-| ID Vendedor | Nome Completo | Unidade (Cidade) | Status |
-|-------------|---------------|------------------|--------|
-| 01000XXH1K | ANDERSON DE ARAUJO SOUSA | Sorocaba | Ativo |
-| 01000XXIAB | ELIZABETE MARIA DA SILVA | Sorocaba | Ativo |
-| 01001T8X0B | EUNICE BELÃO BATISTA | Sorocaba | Ativo |
-| 01000XXF3I | GIOVANNA PONCE PRESTES GUERRERO | Sorocaba | Ativo |
-| 01001T8Z1W | LORENA TAFARELLO BATISTA | Sorocaba | Ativo |
-| 0100CXW8GP | LUAN | Sorocaba | Ativo |
-| 01001T8V8F | PAULO VANDENCLER BELÃO BATISTA | Sorocaba | Ativo |
-| 0100CSN19C | PROF. JOELSON MORA | Sorocaba | Ativo |
-| 01000XXJBF | RAILAN ANDERSON BIZERRA DE SOUZA | Sorocaba | Ativo |
-| 01000XXK6V | RENAN SILVA TARCITANI | Sorocaba | Ativo |
-| 010021ZQEV | SEM ATENDIMENTO | Sorocaba | Ativo |
-| 01003L6P08 | STEFANY VICTÓRIA GRAÇA FAUSTINO | Piedade | Ativo |
+| ID Vendedor | Nome Completo | Unidade (Cidade) | Status | Telefone (Recuperado) |
+|-------------|---------------|------------------|--------|-----------------------|
+| 01003L6P08 | STEFANY VICTÓRIA GRAÇA FAUSTINO | Piedade | **PRONTO** | **15996926764** (nrpager) |
+| 01000XXF3I | GIOVANNA PONCE PRESTES GUERRERO | Sorocaba | **PRONTO** | **15992407195** (nrpager) |
+| 01000XXH1K | ANDERSON DE ARAUJO SOUSA | Sorocaba | **PRONTO** | **15997110590** (nrpager) |
+| 01000XXIAB | ELIZABETE MARIA DA SILVA | Sorocaba | **PRONTO** | **15997395932** (nrpager) |
+| 01000XXJBF | RAILAN ANDERSON BIZERRA DE SOUZA | Sorocaba | **PRONTO** | **15996831657** (nrpager) |
+| 01001T8V8F | PAULO VANDENCLER BELÃO BATISTA | Sorocaba | **PRONTO** | **15988007678** (nrpager) |
+| 01001T8X0B | EUNICE BELÃO BATISTA | Sorocaba | **PRONTO** | **15981236169** (nrpager) |
+| 01000XXK6V | RENAN SILVA TARCITANI | Sorocaba | Pendente | - |
+| 01001T8Z1W | LORENA TAFARELLO BATISTA | Sorocaba | Pendente | - |
+| 0100CXW8GP | LUAN | Sorocaba | Pendente | - |
+| 0100CSN19C | PROF. JOELSON MORA | Sorocaba | Pendente | - |
+| 010021ZQEV | SEM ATENDIMENTO | Sorocaba | - | - |
 
 ## 🛠️ O que fazer? (Passo a Passo)
 1. **Identificar o Telefone:** O Gerente da Unidade deve fornecer o número de celular (WhatsApp) destes vendedores.

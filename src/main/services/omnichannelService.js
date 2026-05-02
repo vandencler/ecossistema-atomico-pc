@@ -37,7 +37,7 @@ class OmnichannelService {
   async _getClientPhone(idpessoa) {
     try {
       const res = await pool.query(`
-        SELECT campostelwhatsapp, nrtelefone
+        SELECT campostelwhatsapp, nrtelefone, nrpager
         FROM wshop.pessoas
         WHERE idpessoa = $1
       `, [idpessoa]);
@@ -45,7 +45,7 @@ class OmnichannelService {
       const p = res.rows[0];
       if (!p) return null;
 
-      const candidates = [p.campostelwhatsapp, p.nrtelefone];
+      const candidates = [p.campostelwhatsapp, p.nrtelefone, p.nrpager];
       for (const raw of candidates) {
         const sanitized = this.sanitizePhone(raw);
         if (sanitized) return sanitized;
@@ -132,7 +132,7 @@ class OmnichannelService {
       // Log success, record interaction and track telemetry
       await logEvent('OMNI_WA_SENT', idpessoa, `Notificacao enviada para ${phone}.`);
       await this._recordInteraction(idpessoa, 'OUTBOUND', message, 'SENT', mockExternalId);
-      await trackEvent('whatsapp_api_dispatch', idpessoa, { phone_prefix: phone.substring(0, 4) });
+      await trackEvent('whatsapp_api_dispatch', 'system', { idpessoa, phone_prefix: phone.substring(0, 4) });
 
       return { ok: true, phone, externalId: mockExternalId };
     } catch (e) {

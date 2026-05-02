@@ -228,7 +228,7 @@ async function performSync(items, options = {}) {
         // TRIGGER OMNICHANNEL NOTIFICATION
         const omnichannel = require('./omnichannelService');
         let overridePhone = null;
-        if (['campostelwhatsapp', 'nrtelefone'].includes(action.campo)) {
+        if (['campostelwhatsapp', 'nrtelefone', 'nrpager'].includes(action.campo)) {
           overridePhone = omnichannel.sanitizePhone(action.valor_novo);
         }
         

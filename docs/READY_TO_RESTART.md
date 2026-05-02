@@ -8,9 +8,9 @@
 2.  **Permissions:** 🟢 `eav_writer` has full `SELECT` access to `docitem`, `produto`, `documen`, etc.
 3.  **Indexes:** 🟢 `idx_docitem_idpessoa` is ACTIVE and utilized for dashboard queries (verified via EXPLAIN ANALYZE).
 4.  **Performance:** 🟢 Average lookup for normal clients is < 15ms.
-5.  **Scale Blocker:** 🔴 `max_connections` is still **100**. Target is **250**. `pending_restart` is currently FALSE.
+5.  **Scale Blocker:** 🟢 RESOLVED. `max_connections` is **250**. `pending_restart` is FALSE.
 
 ### Requested Action:
-DBA must update `max_connections = 250` in the configuration and perform a **RESTART** of the PostgreSQL service on `192.168.2.163`.
+DBA has updated `max_connections = 250` in the configuration and performed a **RESTART** of the PostgreSQL service on `192.168.2.163`.
 
-**Status:** TECHNICAL STANDBY. SYSTEM READY FOR SCALE-UP.
+**Status:** ✅ COMPLETE. SYSTEM READY FOR SCALE-UP.

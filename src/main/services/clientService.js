@@ -235,10 +235,12 @@ async function searchClient(query) {
       if (hasTrgm && phoneIdx) {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrpager,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
       } else {
         const dp = addParam(digitParam);
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${dp}`);
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${dp}`);
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrpager,''), '[^0-9]', '', 'g') LIKE ${dp}`);
       }
 
       // 6. Generic fields (Non-indexed, use LIKE)

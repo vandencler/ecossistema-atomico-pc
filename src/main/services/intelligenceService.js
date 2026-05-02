@@ -230,7 +230,8 @@ class IntelligenceService {
 
     const finalScore = clampScore(score);
 
-    telemetry.trackEvent('intel_score_calculated', data.idpessoa, {
+    telemetry.trackEvent('intel_score_calculated', 'system', {
+      idpessoa: data.idpessoa,
       score: finalScore,
       group: abGroup,
       origin: data.origem,

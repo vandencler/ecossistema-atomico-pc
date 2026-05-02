@@ -25,11 +25,14 @@ class NpsService {
       const delayDays = await getConfigValue('nps_survey_delay_days', '7');
       
       // We look at telemetry_events to find when the user first logged in
+      // We only consider REAL user events like 'APP_LOAD' to avoid picking up 
+      // customers from automated background telemetry.
       const eligibleUsers = await ecoPool.query(`
         WITH first_activity AS (
           SELECT user_id, MIN(occurred_at) as first_active
           FROM telemetry_events
           WHERE user_id NOT IN ('unknown', 'system', 'sync-service')
+            AND event_name = 'APP_LOAD'
           GROUP BY user_id
         )
         SELECT fa.user_id, fa.first_active
@@ -59,7 +62,7 @@ class NpsService {
       // Find the idpessoa (ERP primary key) for this user identity
       // It might be the userId itself, or the cdchamada (Sellers usually have numeric codes)
       const checkRes = await pool.query(`
-        SELECT idpessoa, nmpessoa 
+        SELECT idpessoa, nmpessoa, nrtelefone, campostelwhatsapp, nrpager
         FROM wshop.pessoas 
         WHERE (idpessoa = $1 OR cdchamada = $1)
           AND stvendedor = true
@@ -73,10 +76,10 @@ class NpsService {
         return;
       }
 
-      const { idpessoa, nmpessoa, nrtelefone, campostelwhatsapp } = checkRes.rows[0];
+      const { idpessoa, nmpessoa, nrtelefone, campostelwhatsapp, nrpager } = checkRes.rows[0];
 
       // Verification: Does the seller have a phone?
-      if (!nrtelefone && !campostelwhatsapp) {
+      if (!nrtelefone && !campostelwhatsapp && !nrpager) {
         console.warn(`[NPS] Vendedor ${nmpessoa} (${idpessoa}) nao possui telefone cadastrado. Impossivel enviar WhatsApp.`);
         await logEvent('NPS_DATA_ERROR', idpessoa, `Vendedor sem telefone para NPS: ${nmpessoa}`);
         return;

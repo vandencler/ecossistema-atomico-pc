@@ -14,7 +14,8 @@ test('searchLocalCache - should include phones in search', async () => {
       nrcgc_cic TEXT,
       dtultimacompra TEXT,
       nrtelefone TEXT,
-      campostelwhatsapp TEXT
+      campostelwhatsapp TEXT,
+      nrpager TEXT
     );
     INSERT INTO client_cache (idpessoa, nmpessoa, nmcurto, nrtelefone) 
     VALUES ('1', 'Joao Silva', 'Jao', '123456789');

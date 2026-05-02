@@ -81,6 +81,14 @@ async function runHealthCheck() {
     console.log(`[FAIL] acoes_pendentes: ${e.message}`);
   }
 
+  console.log('\n4. Infraestrutura (Mirror DB):');
+  try {
+    const connRes = await ecoPool.query('SHOW max_connections');
+    console.log(`[OK] max_connections: ${connRes.rows[0].max_connections}`);
+  } catch (e) {
+    console.log(`[FAIL] max_connections: ${e.message}`);
+  }
+
   console.log('\n=== CHECK CONCLUÍDO ===');
 }
 

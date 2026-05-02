@@ -24,14 +24,14 @@ async function exportClientData(idpessoa, format, destPath) {
 
     if (await isOfflineMode()) {
       const db = getLocalDb();
-      profile = db.prepare('SELECT idpessoa, nmpessoa, nmcurto, nrcgc_cic, nrtelefone, dtultimacompra FROM client_cache WHERE idpessoa = ?').get(idpessoa);
+      profile = db.prepare('SELECT idpessoa, nmpessoa, nmcurto, nrcgc_cic, nrtelefone, campostelwhatsapp, nrpager, dtultimacompra FROM client_cache WHERE idpessoa = ?').get(idpessoa);
       
       if (!profile) throw new Error('Dados do cliente não encontrados no cache offline.');
       
       purchases = db.prepare('SELECT dtemissao, nrnotafiscal, vltotal, dsobservacao FROM last_purchases_cache WHERE idpessoa = ? ORDER BY dtemissao DESC').all(idpessoa);
     } else {
       const profileRes = await pool.query(`
-        SELECT p.idpessoa, p.nmpessoa, p.nmcurto, p.nrcgc_cic, p.email, p.nrtelefone, p.dtultimacompra
+        SELECT p.idpessoa, p.nmpessoa, p.nmcurto, p.nrcgc_cic, p.email, p.nrtelefone, p.campostelwhatsapp, p.nrpager, p.dtultimacompra
         FROM wshop.pessoas p
         WHERE p.idpessoa = $1
       `, [idpessoa]);
@@ -76,12 +76,12 @@ async function bulkExportClients(ids, format, destPath) {
 
       if (await isOfflineMode()) {
         const db = getLocalDb();
-        profile = db.prepare('SELECT idpessoa, nmpessoa, nmcurto, nrcgc_cic, nrtelefone, dtultimacompra FROM client_cache WHERE idpessoa = ?').get(idpessoa);
+        profile = db.prepare('SELECT idpessoa, nmpessoa, nmcurto, nrcgc_cic, nrtelefone, campostelwhatsapp, nrpager, dtultimacompra FROM client_cache WHERE idpessoa = ?').get(idpessoa);
         if (!profile) continue;
         purchases = db.prepare('SELECT dtemissao, nrnotafiscal, vltotal, dsobservacao FROM last_purchases_cache WHERE idpessoa = ? ORDER BY dtemissao DESC').all(idpessoa);
       } else {
         const profileRes = await pool.query(`
-          SELECT p.idpessoa, p.nmpessoa, p.nmcurto, p.nrcgc_cic, p.email, p.nrtelefone, p.dtultimacompra
+          SELECT p.idpessoa, p.nmpessoa, p.nmcurto, p.nrcgc_cic, p.email, p.nrtelefone, p.campostelwhatsapp, p.nrpager, p.dtultimacompra
           FROM wshop.pessoas p
           WHERE p.idpessoa = $1
         `, [idpessoa]);
@@ -120,10 +120,11 @@ async function bulkExportClients(ids, format, destPath) {
 async function generateClientPDF(profile, purchases, destPath) {
   return new Promise((resolve, reject) => {
     try {
+      const tel = profile.nrtelefone || profile.campostelwhatsapp || profile.nrpager || '-';
       const docDefinition = {
         content: [
           { text: `Relatorio de Cliente: ${profile.nmpessoa}`, style: 'header' },
-          { text: `Doc: ${profile.nrcgc_cic || '-'} | Email: ${profile.email || '-'} | Tel: ${profile.nrtelefone || '-'}`, margin: [0, 5, 0, 15] },
+          { text: `Doc: ${profile.nrcgc_cic || '-'} | Email: ${profile.email || '-'} | Tel: ${tel}`, margin: [0, 5, 0, 15] },
           { text: 'Historico de Compras', style: 'subheader' },
           {
             table: {
@@ -169,8 +170,9 @@ async function generateBulkClientPDF(clientsData, destPath) {
         if (index > 0) {
           content.push({ text: '', pageBreak: 'before' });
         }
+        const tel = profile.nrtelefone || profile.campostelwhatsapp || profile.nrpager || '-';
         content.push({ text: `Relatorio de Cliente: ${profile.nmpessoa}`, style: 'header' });
-        content.push({ text: `Doc: ${profile.nrcgc_cic || '-'} | Email: ${profile.email || '-'} | Tel: ${profile.nrtelefone || '-'}`, margin: [0, 5, 0, 15] });
+        content.push({ text: `Doc: ${profile.nrcgc_cic || '-'} | Email: ${profile.email || '-'} | Tel: ${tel}`, margin: [0, 5, 0, 15] });
         content.push({ text: 'Historico de Compras', style: 'subheader' });
         content.push({
           table: {
