@@ -2,72 +2,82 @@ const { pool, ecoPool } = require('../db');
 const intel = require('./intelligenceService');
 const { isBirthdayToday, daysSince } = require('../utils');
 const { logEvent, logError } = require('./logService');
+const { getLastHealth } = require('./healthService');
 
 class BulkIntelligenceService {
   async runSweep() {
     console.log('[BULK INTEL] Iniciando varredura de engajamento...');
     let processed = 0;
+
+    const health = await getLastHealth();
+    const can = health.databases.mirror?.accessibleTables || {};
+
     try {
       // 0. Pre-calculate Ranking Cache
-      console.log('[BULK INTEL] Atualizando cache de ranking...');
-      try {
-        const rankingData = await pool.query(`
-          WITH totais AS (
-            SELECT d.idpessoa, SUM(d.vltotal) AS total
-            FROM wshop.documen d
-            WHERE d.tpoperacao = 'V'
-              AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-            GROUP BY d.idpessoa
-          ),
-          ranked AS (
-            SELECT idpessoa, total,
-                   ROW_NUMBER() OVER (ORDER BY total DESC) AS posicao,
-                   COUNT(*) OVER () AS total_clientes
-          FROM totais WHERE total > 0
-        )
-        SELECT idpessoa, posicao, total_clientes, total,
-               CASE
-                 WHEN posicao <= total_clientes * 0.2 THEN 'A'
-                 WHEN posicao <= total_clientes * 0.5 THEN 'B'
-                 ELSE 'C'
-               END AS abc
-        FROM ranked
-        `);
+      if (can.documen) {
+        console.log('[BULK INTEL] Atualizando cache de ranking...');
+        try {
+          const rankingData = await pool.query(`
+            WITH totais AS (
+              SELECT d.idpessoa, SUM(d.vltotal) AS total
+              FROM wshop.documen d
+              WHERE d.tpoperacao = 'V'
+                AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
+              GROUP BY d.idpessoa
+            ),
+            ranked AS (
+              SELECT idpessoa, total,
+                     ROW_NUMBER() OVER (ORDER BY total DESC) AS posicao,
+                     COUNT(*) OVER () AS total_clientes
+            FROM totais WHERE total > 0
+          )
+          SELECT idpessoa, posicao, total_clientes, total,
+                 CASE
+                   WHEN posicao <= total_clientes * 0.2 THEN 'A'
+                   WHEN posicao <= total_clientes * 0.5 THEN 'B'
+                   ELSE 'C'
+                 END AS abc
+          FROM ranked
+          `);
 
-        if (rankingData.rows.length > 0) {
-          // Insert into ranking_cache in batches
-          const rBatchSize = 100;
-          for (let i = 0; i < rankingData.rows.length; i += rBatchSize) {
-            const batch = rankingData.rows.slice(i, i + rBatchSize);
-            const values = batch.map((_, idx) => `($${idx * 5 + 1}::text, $${idx * 5 + 2}::integer, $${idx * 5 + 3}::integer, $${idx * 5 + 4}::numeric, $${idx * 5 + 5}::text, NOW())`).join(', ');
-            const flatParams = batch.flatMap(r => [
-              String(r.idpessoa), 
-              parseInt(r.posicao), 
-              parseInt(r.total_clientes), 
-              parseFloat(r.total), 
-              String(r.abc)
-            ]);
+          if (rankingData.rows.length > 0) {
+            // Insert into ranking_cache in batches
+            const rBatchSize = 100;
+            for (let i = 0; i < rankingData.rows.length; i += rBatchSize) {
+              const batch = rankingData.rows.slice(i, i + rBatchSize);
+              const values = batch.map((_, idx) => `($${idx * 5 + 1}::text, $${idx * 5 + 2}::integer, $${idx * 5 + 3}::integer, $${idx * 5 + 4}::numeric, $${idx * 5 + 5}::text, NOW())`).join(', ');
+              const flatParams = batch.flatMap(r => [
+                String(r.idpessoa), 
+                parseInt(r.posicao), 
+                parseInt(r.total_clientes), 
+                parseFloat(r.total), 
+                String(r.abc)
+              ]);
 
-            await ecoPool.query(`
-              INSERT INTO ranking_cache (idpessoa, posicao, total_clientes, total_compras, abc, calculado_em)
-              VALUES ${values}
-              ON CONFLICT (idpessoa) DO UPDATE SET
-                posicao = EXCLUDED.posicao,
-                total_clientes = EXCLUDED.total_clientes,
-                total_compras = EXCLUDED.total_compras,
-                abc = EXCLUDED.abc,
-                calculado_em = NOW()
-            `, flatParams);
+              await ecoPool.query(`
+                INSERT INTO ranking_cache (idpessoa, posicao, total_clientes, total_compras, abc, calculado_em)
+                VALUES ${values}
+                ON CONFLICT (idpessoa) DO UPDATE SET
+                  posicao = EXCLUDED.posicao,
+                  total_clientes = EXCLUDED.total_clientes,
+                  total_compras = EXCLUDED.total_compras,
+                  abc = EXCLUDED.abc,
+                  calculado_em = NOW()
+              `, flatParams);
+            }
           }
+        } catch (rankErr) {
+          console.warn('[BULK INTEL] Falha ao atualizar ranking (provavelmente falta permissão):', rankErr.message);
         }
-      } catch (rankErr) {
-        console.warn('[BULK INTEL] Falha ao atualizar ranking (provavelmente falta permissão):', rankErr.message);
+      } else {
+        console.warn('[BULK INTEL] Pulando atualização de ranking: sem acesso a wshop.documen');
       }
 
       // 1. Fetch active clients
       console.log('[BULK INTEL] Buscando lista de clientes ativos...');
       let clients = [];
       try {
+        if (!can.documen) throw new Error('Missing permission for documen');
         const clientsRes = await pool.query(`
           WITH stats AS (
             SELECT

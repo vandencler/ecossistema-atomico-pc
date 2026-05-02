@@ -124,7 +124,7 @@ async function getClientRanking(idpessoa) {
     if (result.posicao !== '-') {
       await ecoPool.query(`
         INSERT INTO ranking_cache (idpessoa, posicao, total_clientes, total_compras, abc, calculado_em)
-        VALUES (CAST($1 AS text), $2::integer, $3::integer, $4::numeric, $5::text, NOW())
+        VALUES (CAST($1 AS text), $2::integer, $3::integer, $4::numeric, CAST($5 AS text), NOW())
         ON CONFLICT (idpessoa) DO UPDATE SET
           posicao = EXCLUDED.posicao,
           total_clientes = EXCLUDED.total_clientes,
@@ -179,9 +179,6 @@ async function searchClient(query) {
       queryTrimmed    // $3
     ];
 
-    // const rawIdx = 2;
-    // const trimIdx = 3;
-
     const conditions = tokens.map((token) => {
       const textParam = `%${token}%`;
       const fuzzyParam = token;
@@ -193,7 +190,7 @@ async function searchClient(query) {
       // Sequential parameter indexing per token, starting after static params  
       const addParam = (val) => {
         params.push(String(val));
-        return '$' + params.length + '::text';
+        return 'CAST($' + params.length + ' AS text)';
       };
 
       // 1. Name matches (Indexed)
@@ -392,10 +389,6 @@ async function getTopProductsOffline(idpessoa) {
 }
 
 async function getClientDashboard(rawIdPessoa) {
-
-    const health = await getLastHealth();
-    const can = health.databases.mirror?.accessibleTables || {};
-
   let idpessoa = '0';
   try {
     idpessoa = normalizeId(rawIdPessoa, 'idpessoa');
@@ -426,15 +419,14 @@ async function getClientDashboard(rawIdPessoa) {
       };
     }
 
-    // Individual query handling for resilience
-    
-      const health = await getLastHealth();
-      const canJoinPrices = health.databases.mirror?.accessibleTables?.tabelaprecos !== false;
+    const health = await getLastHealth();
+    const can = health.databases.mirror?.accessibleTables || {};
+    const canJoinPrices = can.tabelaprecos !== false;
 
-      const runQuery = async (p, sql, params, fallback = []) => {
+    const runQuery = async (p, sql, params, fallback = []) => {
       try {
         const result = await p.query(sql, params);
-        return result.rows;
+        return result.rows || [];
       } catch (e) {
         console.warn(`[DASHBOARD] Falha em query: ${e.message}`);
         return fallback;
@@ -454,17 +446,17 @@ async function getClientDashboard(rawIdPessoa) {
 
     let lastPurchasesPromise;
     if (can.documen && can.documento_nfce) {
-      lastPurchasesPromise = pool.query(`
+      lastPurchasesPromise = runQuery(pool, `
         SELECT n.dtemissao, d.vltotal, d.iddocumento
         FROM wshop.documen d
         LEFT JOIN wshop.documento_nfce n ON n.iddocumento = d.iddocumento
-        WHERE d.idpessoa = $1::text AND d.tpoperacao = 'V'
+        WHERE d.idpessoa = CAST($1 AS text) AND d.tpoperacao = 'V'
           AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
         ORDER BY n.dtemissao DESC NULLS LAST
         LIMIT 10
       `, [idpessoa]);
     } else {
-      lastPurchasesPromise = Promise.resolve({ rows: [] });
+      lastPurchasesPromise = Promise.resolve([]);
     }
 
     let topProductsPromise;
@@ -477,7 +469,7 @@ async function getClientDashboard(rawIdPessoa) {
         FROM wshop.docitem di
         JOIN wshop.produto pr ON pr.idproduto = di.idproduto
         JOIN wshop.documen d ON d.iddocumento = di.iddocumento
-        WHERE di.idpessoa = $1::text AND d.tpoperacao = 'V'
+        WHERE di.idpessoa = CAST($1 AS text) AND d.tpoperacao = 'V'
           AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
         GROUP BY pr.nmproduto, pr.cdchamada
         ORDER BY valor_total DESC
@@ -504,7 +496,7 @@ async function getClientDashboard(rawIdPessoa) {
           ELSE 0 END AS freq_dias
         FROM wshop.documen d
         LEFT JOIN wshop.documento_nfce n ON n.iddocumento = d.iddocumento
-        WHERE d.idpessoa = $1::text AND d.tpoperacao = 'V'
+        WHERE d.idpessoa = CAST($1 AS text) AND d.tpoperacao = 'V'
           AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
       `, [idpessoa]);
     } else {
@@ -530,7 +522,7 @@ async function getClientDashboard(rawIdPessoa) {
         FROM wshop.movcaix m
         JOIN wshop.tprec t ON t.idtprecebimento = m.idtprecebimento
         JOIN wshop.documen d ON d.iddocumento = m.iddocumento
-        WHERE d.idpessoa = $1::text AND d.tpoperacao = 'V'
+        WHERE d.idpessoa = CAST($1 AS text) AND d.tpoperacao = 'V'
           AND (m.sttroco IS NULL OR m.sttroco != 'S')
           AND (m.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
         GROUP BY 1 ORDER BY valor DESC
@@ -541,7 +533,7 @@ async function getClientDashboard(rawIdPessoa) {
 
     const rankingPromise = getClientRanking(idpessoa).catch(() => ({ posicao: '-', abc: '-', total_clientes: 0 }));
 
-    const [profileRows, lastPurchasesRows, topProducts, statsRows, paymentChannels, ranking] = await Promise.all([
+    const [profileRows, lastPurchases, topProducts, statsRows, paymentChannels, ranking] = await Promise.all([
       profilePromise,
       lastPurchasesPromise,
       topProductsPromise,
@@ -551,7 +543,6 @@ async function getClientDashboard(rawIdPessoa) {
     ]);
 
     const profile = (Array.isArray(profileRows) && profileRows.length > 0) ? profileRows[0] : null;
-    const lastPurchases = Array.isArray(lastPurchasesRows) ? lastPurchasesRows : (lastPurchasesRows?.rows || []);
     const stats = (Array.isArray(statsRows) && statsRows.length > 0) ? statsRows[0] : {};
 
 

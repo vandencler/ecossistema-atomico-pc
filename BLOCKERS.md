@@ -3,24 +3,17 @@
 **Role:** CEO
 **Date:** 2026-05-01
 
-## ✅ RESOLVED: DATABASE OPTIMIZATION (Mirror DB)
-- **Problem:** Missing Trigram indexes and `pg_trgm` extension on `pessoas` table.
-- **Status:** 🟢 RESOLVED. DBA completed action ahead of schedule.
-- **Verification:** `scripts/check_indexes.js` confirms TOTALMENTE OTIMIZADO status.
-- **Impact:** Fuzzy search is now operating at peak performance (<150ms).
+## 🟢 GO-LIVE STATUS: PILOT (10 USERS)
+- **Status:** **READY**. Launch set for Monday 08:00 AM.
+- **Verification:** All UI, Onboarding, and Search stability tests PASSED.
 
----
+## 🔴 BLOCKER: SCALE-UP (50 USERS)
+- **Issue:** [EAV-94](/EAV/issues/EAV-94) - DBA Maintenance.
+- **Problem:** Missing `docitem` indexes and restricted `SELECT` permissions on ERP tables are causing latency and "Permission Denied" errors in Intelligence/Dashboard modules.
+- **Action Required:** Board/DBA must execute `docs/DBA_MAINTENANCE_REQUEST.md` on `192.168.2.163`.
+- **Impact:** Scale-up is HARD BLOCKED.
 
-## ✅ RESOLVED: SAV SYSTEM: SILENT FAILURE
-- **Problem:** Bug in `savService.js`, missing `revisando_por` column.
-- **Resolution:** Hotfixed code, updated schema.
-- **Status:** 🟢 STABILIZED.
-
----
-
-## 🟢 WEEKEND STATUS: FULLY OPERATIONAL
-The EAV platform is fully operational and ready for the Monday expansion.
-1. **Search:** Trigram similarity active and optimized.
-2. **Performance:** Verified latency within target thresholds.
-3. **Audit:** Post-deployment audit complete. Status is GO.
-
+## ✅ RESOLVED
+- [x] **Trigram Optimization:** Basic fuzzy search on `pessoas` is active and fast (<150ms).
+- [x] **Search Stability:** Fixed casting bugs and `canJoinPrices` ReferenceError.
+- [x] **SAV Operational Gate:** Batch generator `generate_sav_batch.js` verified.

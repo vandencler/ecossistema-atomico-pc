@@ -44,4 +44,16 @@ Clique no lápis ao lado do campo, corrija e salve. Assim que o gerente aprovar,
 Você é o dono da qualidade da nossa base! ✅
 
 ---
+
+### Mensagem 4: Pílula de Conhecimento #3 (Inteligência)
+**Dica Pro: Não ligue no escuro!**
+
+O EAV analisa o comportamento de compra de cada cliente e te avisa:
+🔥 **Fogo:** Cliente em alto risco de parar de comprar. Ligue agora!
+🎯 **Alvo:** Sugestão do "Próximo Melhor Produto" para oferecer.
+💎 **Diamante:** Seu cliente Curva A merece aquele atendimento especial.
+
+Use os badges para decidir para quem ligar primeiro e bata sua meta mais rápido! 🧠📈
+
+---
 *Instruções para o CMO: Enviar a Mensagem 1 às 08h00 e as pílulas ao longo do dia.*
