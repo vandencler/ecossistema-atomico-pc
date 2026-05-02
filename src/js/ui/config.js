@@ -31,13 +31,147 @@ export async function loadConfigModule() {
   const localContainer = $('local-settings-container');
   if (localContainer) {
     const config = await api.getConfig();
-    setChildren(localContainer, renderConfigForm(config));
+    const identity = await api.getAppIdentity();
+    setChildren(localContainer, [
+      renderIdentitySection(identity),
+      renderConfigForm(config)
+    ]);
   }
 
   const opsContainer = $('ops-metrics-container');
   if (opsContainer && data && !data.error) {
     setChildren(opsContainer, renderOpsMetrics(data));
   }
+
+  const supportContainer = $('support-links-container');
+  if (supportContainer) {
+    setChildren(supportContainer, renderSupportLinks());
+  }
+}
+
+function renderSupportLinks() {
+  const wikiUrl = 'https://wiki.atomico.com/guiarapido';
+  
+  const btnWiki = create('button', {
+    className: 'btn-support-link',
+    text: 'Abrir Wiki / FAQ',
+    onclick: () => api.openExternal(wikiUrl)
+  });
+
+  const btnWA = create('button', {
+    className: 'btn-support-wa',
+    text: 'Suporte via WhatsApp',
+    onclick: () => api.openWhatsApp({ phone: '5521999999999', text: 'Olá, preciso de ajuda com o sistema EAV.' })
+  });
+
+  const btnGuia = create('button', {
+    className: 'btn-support-local',
+    text: 'Ver Guia Rápido',
+    onclick: async () => {
+      const content = await api.getHelpContent('GUIA_RAPIDO.md');
+      if (content.error) toast(content.error, 'error');
+      else showHelpModal('Guia Rápido EAV', content);
+    }
+  });
+
+  const btnFAQ = create('button', {
+    className: 'btn-support-local',
+    text: 'Ver FAQ Completo',
+    onclick: async () => {
+      const content = await api.getHelpContent('FAQ.md');
+      if (content.error) toast(content.error, 'error');
+      else showHelpModal('FAQ - Perguntas Frequentes', content);
+    }
+  });
+
+  const btnMult = create('button', {
+    className: 'btn-support-local',
+    text: 'Guia do Multiplicador',
+    onclick: async () => {
+      const content = await api.getHelpContent('GUIA_MULTIPLICADOR.md');
+      if (content.error) toast(content.error, 'error');
+      else showHelpModal('Guia do Multiplicador (Fase 6)', content);
+    }
+  });
+
+  return create('div', { className: 'support-links-grid' }, [
+    create('div', { className: 'support-item' }, [
+      create('div', { className: 'support-label', text: 'Onboarding (Local)' }),
+      create('div', { className: 'support-desc', text: 'Documentação essencial disponível offline.' }),
+      create('div', { className: 'support-actions' }, [btnGuia, btnFAQ, btnMult])
+    ]),
+    create('div', { className: 'support-item' }, [
+      create('div', { className: 'support-label', text: 'Documentação Online' }),
+      create('div', { className: 'support-desc', text: 'Wiki completa com vídeos e tutoriais atualizados.' }),
+      btnWiki
+    ]),
+    create('div', { className: 'support-item' }, [
+      create('div', { className: 'support-label', text: 'Atendimento Direto' }),
+      create('div', { className: 'support-desc', text: 'Fale com um multiplicador via WhatsApp.' }),
+      btnWA
+    ])
+  ]);
+}
+
+function showHelpModal(title, markdown) {
+  const overlay = create('div', { className: 'dialog-overlay' });
+  
+  // Simple MD to HTML conversion
+  const html = markdown
+    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\* (.*$)/gm, '<li>$1</li>')
+    .replace(/^- (.*$)/gm, '<li>$1</li>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+
+  const content = create('div', { className: 'help-modal-content' }, [
+    create('div', { className: 'help-modal-header' }, [
+      create('div', { className: 'help-modal-title', text: title }),
+      create('button', { className: 'help-modal-close', text: '×', onclick: () => overlay.remove() })
+    ]),
+    create('div', { className: 'help-modal-body', innerHTML: html })
+  ]);
+
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove();
+  };
+}
+
+function renderIdentitySection(identity) {
+  const input = create('input', {
+    className: 'config-input',
+    value: identity,
+    placeholder: 'Ex: rep-01, gestor-sul...'
+  });
+
+  const btn = create('button', {
+    className: 'btn-save-config',
+    text: 'Identificar',
+    onclick: async () => {
+      btn.disabled = true;
+      const res = await api.setAppIdentity(input.value);
+      if (res.ok) {
+        // Also save to system config for persistence across restarts
+        await api.setSystemConfig('app_identity', input.value);
+        toast('Identidade atualizada: ' + res.identity, 'success');
+      } else {
+        toast('Erro: ' + res.error, 'error');
+      }
+      btn.disabled = false;
+    }
+  });
+
+  return create('div', { className: 'form-group-box' }, [
+    create('div', { className: 'form-title', text: 'Identidade do Sistema (Telemetria)' }),
+    create('div', { className: 'config-input-group' }, [input, btn]),
+    create('div', { className: 'config-desc', text: 'Esta identidade será vinculada a todos os eventos de telemetria e ações do SAV.' })
+  ]);
 }
 
 function renderOpsMetrics(health) {
@@ -121,7 +255,8 @@ function renderConfigForm(config) {
     create('div', { className: 'form-title', text: 'Configurações de App' }),
     createField('Ranking Cache (Horas)', settings.cacheTTL || 24, (v) => settings.cacheTTL = parseInt(v)),
     createCheckbox('Sync Automático', settings.autoSync, (v) => settings.autoSync = v),
-    createField('Intervalo Sync (Minutos)', settings.syncInterval || 5, (v) => settings.syncInterval = parseInt(v))
+    createField('Intervalo Sync (Minutos)', settings.syncInterval || 5, (v) => settings.syncInterval = parseInt(v)),
+    createField('ID Vendedor (Telemetria)', settings.userId || '', (v) => settings.userId = v, 'text', 'Ex: 101, 105...')
   ]);
 
   const saveBtn = create('button', {

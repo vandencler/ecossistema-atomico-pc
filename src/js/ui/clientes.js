@@ -38,17 +38,17 @@ export function renderClientHeader(profile, rank, onBack, priority) {
 
   const children = [
     ActionGroup([
-      IconButton('< Voltar a busca', onBack, { className: 'ch-back' }),
+      IconButton('Voltar a busca', onBack, { className: 'ch-back', icon: 'ROTATE_CCW' }),
       IconButton('PDF', async () => {
         const res = await api.exportClientData(profile.idpessoa, 'pdf');
         if (res.error) toast(`Erro: ${res.error}`, 'error');
         else if (!res.canceled) toast('PDF gerado com sucesso!', 'success');
-      }, { className: 'ch-export-btn' }),
+      }, { className: 'ch-export-btn', icon: 'FILE_TEXT' }),
       IconButton('Excel', async () => {
         const res = await api.exportClientData(profile.idpessoa, 'excel');
         if (res.error) toast(`Erro: ${res.error}`, 'error');
         else if (!res.canceled) toast('Excel gerado com sucesso!', 'success');
-      }, { className: 'ch-export-btn' })
+      }, { className: 'ch-export-btn', icon: 'FILE_SPREADSHEET' })
     ], { className: 'ch-actions' }),
     create('div', { className: 'ch-name', text: textValue(profile.nmpessoa, 'Cliente sem nome') })
   ];

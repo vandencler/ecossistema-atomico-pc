@@ -129,10 +129,7 @@ function renderSummary(info) {
     MetricCard('Total', info.total || lastRows.length, { type: 'info' }),
     MetricCard('Critica', info.critica || 0, { type: 'error' }),
     MetricCard('Alta', info.alta || 0, { type: 'warn' }),
-    create('div', { className: 'metric-card' }, [
-      create('div', { className: 'metric-label', text: 'Status Atual' }),
-      StatusBadge(STATUS_LABELS[filters.status] || filters.status, { type: filters.status.toLowerCase() })
-    ])
+    MetricCard('Status Atual', STATUS_LABELS[filters.status] || filters.status, { type: filters.status.toLowerCase() })
   ]);
 
   document.querySelectorAll('.sav-tab').forEach((button) => {
@@ -162,15 +159,17 @@ function renderBulkBar(onOpenClient, onOpenWhatsApp) {
 
   const approve = IconButton(`Aprovar ${selectedPending.length || ''}`.trim(), () => reviewSelected('APROVADO', onOpenClient, onOpenWhatsApp), {
     className: 'sav-approve-btn',
-    disabled: selectedPending.length === 0
+    disabled: selectedPending.length === 0,
+    icon: 'CHECK'
   });
 
   const reject = IconButton(`Rejeitar ${selectedPending.length || ''}`.trim(), () => reviewSelected('REJEITADO', onOpenClient, onOpenWhatsApp), {
     className: 'sav-reject-btn',
-    disabled: selectedPending.length === 0
+    disabled: selectedPending.length === 0,
+    icon: 'X'
   });
 
-  const exportPDF = IconButton('Exportar PDF', async () => {
+  const exportPDF = IconButton('PDF', async () => {
     const ids = Array.from(new Set(selectedRows.map(r => r.idpessoa).filter(Boolean)));
     if (ids.length === 0) return;
     const res = await api.bulkExportClients(ids, 'pdf');
@@ -178,10 +177,11 @@ function renderBulkBar(onOpenClient, onOpenWhatsApp) {
     else if (!res.canceled) toast('PDF em lote gerado!', 'success');
   }, {
     className: 'sav-export-btn',
-    disabled: selectedRows.length === 0
+    disabled: selectedRows.length === 0,
+    icon: 'FILE_TEXT'
   });
 
-  const exportExcel = IconButton('Exportar Excel', async () => {
+  const exportExcel = IconButton('Excel', async () => {
     const ids = Array.from(new Set(selectedRows.map(r => r.idpessoa).filter(Boolean)));
     if (ids.length === 0) return;
     const res = await api.bulkExportClients(ids, 'excel');
@@ -189,7 +189,8 @@ function renderBulkBar(onOpenClient, onOpenWhatsApp) {
     else if (!res.canceled) toast('Excel em lote gerado!', 'success');
   }, {
     className: 'sav-export-btn',
-    disabled: selectedRows.length === 0
+    disabled: selectedRows.length === 0,
+    icon: 'FILE_SPREADSHEET'
   });
 
   const actionsList = [approve, reject, exportPDF, exportExcel];
@@ -199,7 +200,7 @@ function renderBulkBar(onOpenClient, onOpenWhatsApp) {
       const res = await api.bulkExportByPriority(filters.prioridade, 'pdf');
       if (res.error) toast(`Erro: ${res.error}`, 'error');
       else if (!res.canceled) toast('PDF de prioridade gerado!', 'success');
-    }, { className: 'sav-export-btn' }));
+    }, { className: 'sav-export-btn', icon: 'FILE_TEXT' }));
   }
 
   setChildren(target, [
@@ -332,19 +333,19 @@ function renderSavCard(row, onOpenClient, onOpenWhatsApp) {
 
   const card = create('div', { className: `sav-card ${urgencyClass} status-${status.toLowerCase()}` });
   const actions = [
-    IconButton('Abrir', () => onOpenClient?.(row.idpessoa), { className: 'sav-open-btn' }),
-    IconButton('Historico', () => toggleHistory(row, card), { className: 'sav-history-btn' })
+    IconButton('Abrir', () => onOpenClient?.(row.idpessoa), { className: 'sav-open-btn', icon: 'EXTERNAL_LINK' }),
+    IconButton('Hist�rico', () => toggleHistory(row, card), { className: 'sav-history-btn', icon: 'HISTORY' })
   ];
 
   if (phone) {
-    actions.push(IconButton('WhatsApp', () => onOpenWhatsApp?.(phone), { className: 'sav-whatsapp-btn' }));
+    actions.push(IconButton('WhatsApp', () => onOpenWhatsApp?.(phone), { className: 'sav-whatsapp-btn', icon: 'MESSAGE_SQUARE' }));
   }
   if (canReview) {
-    actions.push(IconButton('Aprovar', () => reviewSavAction(row, 'APROVADO', onOpenClient, onOpenWhatsApp), { className: 'sav-approve-btn' }));
-    actions.push(IconButton('Rejeitar', () => reviewSavAction(row, 'REJEITADO', onOpenClient, onOpenWhatsApp), { className: 'sav-reject-btn' }));
+    actions.push(IconButton('Aprovar', () => reviewSavAction(row, 'APROVADO', onOpenClient, onOpenWhatsApp), { className: 'sav-approve-btn', icon: 'CHECK' }));
+    actions.push(IconButton('Rejeitar', () => reviewSavAction(row, 'REJEITADO', onOpenClient, onOpenWhatsApp), { className: 'sav-reject-btn', icon: 'X' }));
   }
   if (canUndo) {
-    actions.push(IconButton('Desfazer', () => undoAction(row, onOpenClient, onOpenWhatsApp), { className: 'sav-undo-btn' }));
+    actions.push(IconButton('Desfazer', () => undoAction(row, onOpenClient, onOpenWhatsApp), { className: 'sav-undo-btn', icon: 'ROTATE_CCW' }));
   }
 
   const reasons = Array.isArray(row.prioridade_motivos) ? row.prioridade_motivos : [];

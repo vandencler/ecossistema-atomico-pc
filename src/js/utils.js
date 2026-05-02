@@ -12,6 +12,7 @@ export function create(tag, options = {}, children = []) {
   if (options.id) element.id = options.id;
   if (options.className) element.className = options.className;
   if (options.text !== undefined) element.textContent = options.text;
+  if (options.innerHTML !== undefined) element.innerHTML = options.innerHTML;
   if (options.title) element.title = options.title;
   if (options.type) element.type = options.type;
   if (options.value !== undefined) element.value = options.value;

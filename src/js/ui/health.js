@@ -72,8 +72,8 @@ function renderAnalyticalReports() {
     ].map(item => create('div', { className: 'analytical-row' }, [
         create('span', { text: item.label }),
         ActionGroup([
-          IconButton('📄 PDF', () => exportPriority(item.bucket, 'pdf'), { className: item.color }),
-          IconButton('📊 XLS', () => exportPriority(item.bucket, 'excel'), { className: item.color })
+          IconButton('PDF', () => exportPriority(item.bucket, 'pdf'), { className: item.color, icon: 'FILE_TEXT' }),
+          IconButton('Excel', () => exportPriority(item.bucket, 'excel'), { className: item.color, icon: 'FILE_SPREADSHEET' })
         ])
       ]))
     )

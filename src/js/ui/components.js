@@ -1,4 +1,5 @@
 import { create, textValue, phoneDisplay, fmtDate } from '../utils.js';
+import { ICONS } from './icons.js';
 
 /**
  * UI Component Library
@@ -79,13 +80,26 @@ export function ActionGroup(children, options = {}) {
  * Standardized button component.
  */
 export function IconButton(text, onClick, options = {}) {
+  const children = [];
+  
+  if (options.icon && ICONS[options.icon]) {
+    children.push(create('span', { 
+      className: 'btn-icon',
+      innerHTML: ICONS[options.icon]
+    }));
+  }
+  
+  if (text) {
+    children.push(create('span', { className: 'btn-text', text }));
+  }
+
   return create('button', {
-    className: options.className || '',
+    className: `ui-icon-btn ${options.className || ''}`.trim(),
     type: options.type || 'button',
     disabled: options.disabled,
     title: options.title,
     onClick
-  }, [text]);
+  }, children);
 }
 
 /**
@@ -120,7 +134,8 @@ export function renderSearchResult(row, onOpen) {
     onClick: () => onOpen(row.idpessoa)
   }, [
     create('div', { className: 'result-name' }, [
-      create('span', { text: textValue(row.nmpessoa, 'Cliente sem nome') }),
+      create('span', { className: 'btn-icon', innerHTML: ICONS.USERS }),
+      create('span', { text: '👤 ' + textValue(row.nmpessoa, 'Cliente sem nome') }),
       ...badges
     ]),
     create('div', { className: 'result-info' }, info.map((item) => create('span', { text: item })))

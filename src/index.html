@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self';">
   <title>Sistema Atomico de Vendas</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="collapsed-tab" id="collapsed-tab">
@@ -17,30 +17,36 @@
         <img class="header-logo" src="img/logo.png" alt="Sistema Atomico de Vendas">
         <span class="logo-text">Sistema Atomico de Vendas</span>
       </div>
-      <button class="btn-collapse" id="btn-collapse" type="button" title="Recolher">›</button>
+      <button class="btn-collapse" id="btn-collapse" type="button" title="Recolher">??</button>
     </div>
 
     <div class="module-nav" id="module-nav">
       <button class="nav-btn active" data-module="clientes" type="button">
-        <span class="nav-icon">C</span><span class="nav-label">Clientes</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Clientes</span>
       </button>
       <button class="nav-btn" data-module="dashboard" type="button">
-        <span class="nav-icon">D</span><span class="nav-label">Dashboard</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span><span class="nav-label">Dashboard</span>
       </button>
       <button class="nav-btn" data-module="aniversarios" type="button">
-        <span class="nav-icon">A</span><span class="nav-label">Aniversarios</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect width="20" height="5" x="2" y="7" rx="1"/><line x1="12" x2="12" y1="22" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span><span class="nav-label">Anivers�rios</span>
       </button>
       <button class="nav-btn" data-module="sav" type="button">
-        <span class="nav-icon">S</span><span class="nav-label">SAV</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span><span class="nav-label">SAV</span>
       </button>
       <button class="nav-btn" data-module="sync" type="button">
-        <span class="nav-icon">Y</span><span class="nav-label">Sync</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg></span><span class="nav-label">Sync</span>
       </button>
       <button class="nav-btn" data-module="config" type="button">
-        <span class="nav-icon">G</span><span class="nav-label">Config</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="nav-label">Config</span>
       </button>
       <button class="nav-btn" data-module="health" type="button">
-        <span class="nav-icon">H</span><span class="nav-label">Saúde</span>
+        <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></svg></span><span class="nav-label">Sa�de</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer" style="padding: 8px 10px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2);">
+      <button class="nav-btn" id="btn-feedback" type="button" style="flex: none; width: 100%; text-align: center;">
+        <span class="nav-icon">💬</span><span class="nav-label">Dê seu Feedback</span>
       </button>
     </div>
 
@@ -49,7 +55,7 @@
         <div class="search-box">
           <input type="text" id="search-input" class="search-input"
                  placeholder="Nome, CPF, telefone, email...">
-          <div class="search-hint">Ex: Paulo 7678 ou 000.015</div>
+          <div class="search-hint">Pesquise por nome, CPF, telefone ou c�digo</div>
         </div>
 
         <div class="search-results" id="search-results"></div>
@@ -76,7 +82,7 @@
 
       <div class="module" id="mod-dashboard" hidden>
         <div class="dashboard-header">
-          <div class="dashboard-title">Painel Estratégico (CTO)</div>
+          <div class="dashboard-title">Painel Estrat�gico (CTO)</div>
           <button class="dashboard-refresh" id="dashboard-refresh" type="button">Atualizar Metricas</button>
         </div>
         
@@ -85,7 +91,7 @@
         </div>
 
         <div class="dashboard-section">
-          <div class="dashboard-section-title">Exportação em Massa & Analytics</div>
+          <div class="dashboard-section-title">Exporta��o em Massa & Analytics</div>
           <div class="export-grid">
             <div class="export-card">
               <div class="export-card-title">Prioridade CRÍTICA</div>
@@ -97,7 +103,7 @@
             </div>
             <div class="export-card">
               <div class="export-card-title">Prioridade ALTA</div>
-              <p>Relatorio de clientes com scores elevados (ABC A/B).</p>
+              <p>Relat�rio de clientes com scores elevados (ABC A/B).</p>
               <div class="export-actions">
                 <button class="btn-export-pdf" data-bucket="high" data-format="pdf">PDF</button>
                 <button class="btn-export-excel" data-bucket="high" data-format="excel">Excel</button>
@@ -152,7 +158,7 @@
 
       <div class="module" id="mod-sync" hidden>
         <div class="sync-header">
-          <div class="sync-title">Sincronização</div>
+          <div class="sync-title">Sincroniza��o</div>
           <button class="sync-refresh-btn" id="sync-refresh" type="button">Verificar</button>
         </div>
         <div class="sync-summary" id="sync-summary"></div>
@@ -166,14 +172,14 @@
 
       <div class="module" id="mod-config" hidden>
         <div class="config-header">
-          <div class="config-title">Configurações</div>
+          <div class="config-title">Configura��es</div>
         </div>
         <div class="config-section">
           <div class="config-section-title">Status dos Bancos de Dados</div>
           <div id="db-status-container">Carregando status...</div>
         </div>
         <div class="config-section">
-          <div class="config-section-title">Parâmetros do Sistema</div>
+          <div class="config-section-title">Par�metros do Sistema</div>
           <div id="system-configs-container">Carregando parâmetros...</div>
         </div>
         <div class="config-section">
@@ -181,25 +187,29 @@
           <div id="local-settings-container">Carregando...</div>
         </div>
         <div class="config-section">
-          <div class="config-section-title">Métricas de Operação</div>
+          <div class="config-section-title">M�tricas de Opera��o</div>
           <div id="ops-metrics-container">Carregando métricas...</div>
+        </div>
+        <div class="config-section">
+          <div class="config-section-title">Suporte e Documenta��o</div>
+          <div id="support-links-container">Carregando...</div>
         </div>
         <div class="config-section">
           <div class="config-section-title">Sobre</div>
           <div class="config-info">
-            <p>Ecossistema Atômico v1.0.0</p>
-            <p>Desenvolvido para Empório Natural</p>
+            <p>Ecossistema At�mico v1.0.0</p>
+            <p>Desenvolvido para Emp�rio Natural</p>
           </div>
         </div>
       </div>
 
       <div class="module" id="mod-health" hidden>
         <div class="health-header">
-          <div class="health-title">Painel de Saúde do Sistema</div>
+          <div class="health-title">Painel de Sa�de do Sistema</div>
           <button class="health-refresh-btn" id="health-refresh" type="button">Atualizar</button>
         </div>
         <div id="health-dashboard-container">
-          <div class="state-msg muted">Carregando diagnóstico...</div>
+          <div class="state-msg muted">Carregando diagn�stico...</div>
         </div>
       </div>
     </div>
@@ -208,3 +218,5 @@
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
+
+
