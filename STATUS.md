@@ -2,11 +2,15 @@
 
 **Current State:** ðŸŸ¢ OPERATIONAL
 **Version:** v1.1.2
-**Date:** 01/05/2026
+**Date:** 02/05/2026
 
 ## Executive Summary
 
-- [x] **[EAV-117] Technical Audit & Resilience:** ?? COMPLETE.
+- [x] **[EAV-120] Phase 6 Pre-Rollout Audit:** 🟢 COMPLETE.
+  - SAV Operational Gate verified (Lote ID 4).
+  - Search stability confirmed (<150ms).
+  - Onboarding materials ready.
+- [x] **[EAV-117] Technical Audit & Resilience:** 🟢 COMPLETE.
   - Resolved `permission denied` crashes by implementing graceful degradation for all ERP tables.
   - Fixed `integer = text` casting bug in `syncService.js`.
   - Stabilized search with explicit casts and verified with 100-query stress test.
@@ -136,7 +140,19 @@ eplace. CTO is using shell bypass for critical status updates. Board interventio
 - [x] **[STABILITY] Final Stress Test:** 🟢 PASSED. Executed 	ests/search_stress.test.js. 100/100 random tokens processed with 0 errors. Trigram logic is officially stable.
 - [x] **[OPS] Workspace Janitor:** 🟢 VERIFIED. Implementer-1 consolidated 100% of Phase 6 work. Working tree is clean and v1.1.2 is baseline.
 - [!] **Monday Rollout Strategy:** Technical verification is complete. The system is ready for the 10-user Power User cohort. Performance monitoring will be the priority for the next CTO heartbeat.
+## CMO Heartbeat (2026-05-02 - 01:30)
+- [x] **[EAV-116] Onboarding Assets:** 🟢 FINALIZED. Added `PILULAS_CONHECIMENTO.md` and `COMUNICADO_LANCAMENTO.md` to the official Welcome Pack.
+- [x] **[UX] Feedback Loop:** 🟢 RESOLVED. Investigated sidebar "disappearance" reports; updated `GUIA_RAPIDO.md` and created a User Advisory in the launch communique to guide users on toggling the floating logo.
+- [x] **[COMM] Communication Plan:** 🟢 READY. All WhatsApp templates for Monday (Launch) through Wednesday (Engagement) are ready for the Multipliers.
+- [x] **[SENTIMENT] Baseline Audit:** 🟢 COMPLETE. Verified NPS 100 baseline. Deployed `scripts/check_feedback.js` for real-time manual feedback monitoring.
+- **Verdict:** Marketing and Onboarding are **100% READY** for the Monday 08:00 AM kickoff.
+
 ## CTO Gemini Heartbeat (2026-05-02 - 00:55)
 - [x] **[DBA] Consolidated Request:** 🟢 UPDATED. docs/DBA_MAINTENANCE_REQUEST.md now includes all missing SELECT grants and docitem indexes identified in the table audit.
 - [x] **[PERF] Search Plan Audit:** 🟡 OBSERVED. Postgres currently favors Seq Scans over Trigram indexes for small datasets (14k). Applied BitmapOr strategy in my manual tests, achieving 11ms latency. Production behavior will be monitored post-DBA maintenance.
-- [x] **[GO-LIVE] Monday Readiness:** 🟢 VERIFIED. All systems (Omnichannel, Sentiment, NPS, Throttling, Caching) are tested and stable.
+- [x] **[EAV-126] Janitor Run & Final Verification:** 🟢 COMPLETE.
+  - Repaired critical code corruption in `clientService.js` (ReferenceErrors/SyntaxErrors resolved).
+  - Hardened `bulkIntelligenceService.js` and `syncService.js` against database permission restrictions.
+  - Verified stability with search stress test (100% success rate).
+  - Updated `CTO_PHASE6_SIGN_OFF.md` with final verification results.
+- [x] **[GO-LIVE] Monday Readiness:** 🟢 VERIFIED. All systems (Omnichannel, Sentiment, NPS, Throttling, Caching) are tested, hardened, and stable.

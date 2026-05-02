@@ -82,7 +82,7 @@ test('performSync re-reads approved action and executes UPDATE only', async () =
   assert.strictEqual(result.ok, true);
   assert.strictEqual(result.syncedCount, 1);
   assert.strictEqual(mirrorQueries.length, 1);
-  assert.match(mirrorQueries[0].sql, /^UPDATE wshop\.pessoas SET email = \$1::text WHERE idpessoa = \$2::text$/);
+  assert.match(mirrorQueries[0].sql, /^UPDATE wshop\.pessoas SET email = CAST\(\$1 AS text\) WHERE idpessoa = CAST\(\$2 AS text\)$/);
   assert.ok(!mirrorQueries[0].sql.toUpperCase().includes('INSERT'));
   assert.deepStrictEqual(mirrorQueries[0].params, ['novo@example.com', '42']);
   assert.deepStrictEqual(transitions, [['start', 123, 'tester'], ['done', 123, 'tester']]);
@@ -96,5 +96,5 @@ test('performSync dryRun returns preview without writing to ERP target', async (
   assert.strictEqual(result.syncedCount, 0);
   assert.strictEqual(mirrorQueries.length, 0);
   assert.strictEqual(result.results[0].status, 'PREVIEW');
-  assert.match(result.results[0].sql, /^UPDATE wshop\.pessoas SET email = \$1::text WHERE idpessoa = \$2::text$/);
+  assert.match(result.results[0].sql, /^UPDATE wshop\.pessoas SET email = CAST\(\$1 AS text\) WHERE idpessoa = CAST\(\$2 AS text\)$/);
 });

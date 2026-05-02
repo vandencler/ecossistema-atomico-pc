@@ -101,3 +101,5 @@ test('reconcileCorrections - should detect discrepancies', async () => {
   assert.strictEqual(results.discrepancies.length, 1);
   assert.strictEqual(results.discrepancies[0].local, 'NEW');
 });
+
+test('searchClient - should use explicit CAST for parameters', async () => { let capturedSql = ''; const mockPool = { query: async (sql, _params) => { capturedSql = sql; return { rows: [] }; } }; const { searchClient } = proxyquire('../src/main/services/clientService', { '../db': { pool: mockPool, ecoPool: {} }, './healthService': { isOfflineMode: async () => false, isSearchOptimized: async () => false, getIndexMap: async () => ({ 'hasTrgmExtension': true, 'idx_pessoas_nmpessoa_trgm': true }), getLastHealth: async () => ({ databases: { mirror: { accessibleTables: { tabelaprecos: true } } } }) }, './telemetryService': { trackEvent: async () => {} }, './logService': { logError: async () => {} }, './cacheService': {}, './intelligenceService': {} }); await searchClient('joao'); assert.ok(capturedSql.includes('CAST($'), 'Should use CAST( AS text) for parameters'); assert.ok(capturedSql.includes('AS text)'), 'Should use CAST( AS text) for parameters'); });

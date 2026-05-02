@@ -165,8 +165,10 @@ async function searchClient(query) {
     const indexMap = await getIndexMap();
     const hasTrgm = indexMap['hasTrgmExtension'] === true;
     const health = await getLastHealth();
-    const canJoinPrices = health.databases.mirror?.accessibleTables?.tabelaprecos !== false;
-
+    
+    // Safety: Default to false if health or mirror data is missing
+    const mirrorHealth = health?.databases?.mirror;
+    const canJoinPrices = mirrorHealth?.accessibleTables?.tabelaprecos === true;
 
     const queryTrimmed = query.trim();
     const queryRaw = queryTrimmed.toLowerCase();
@@ -182,7 +184,7 @@ async function searchClient(query) {
     const conditions = tokens.map((token) => {
       const textParam = `%${token}%`;
       const fuzzyParam = token;
-      const digitsOnly = token.replace(/\\D/g, '');
+      const digitsOnly = token.replace(/\D/g, '');
       const digitParam = digitsOnly.length > 0 ? `%${digitsOnly}%` : '%NOMATCH%';
 
       const subConditions = [];
@@ -209,7 +211,7 @@ async function searchClient(query) {
         subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParam)}`);
       }
 
-      // 3. Call code (Indexed - this one IS using LOWER in the Mirror)
+      // 3. Call code (Indexed)
       if (hasTrgm && indexMap['idx_pessoas_cdchamada_trgm']) {
         subConditions.push(`LOWER(p.cdchamada) % ${addParam(fuzzyParam)}`);
       } else {
@@ -224,16 +226,14 @@ async function searchClient(query) {
       }
 
       // 5. Phones (Indexed split)
-      if (hasTrgm && (indexMap['idx_pessoas_telwa_trgm'] || indexMap['idx_pessoas_phones_trgm'])) {
+      const phoneIdx = indexMap['idx_pessoas_phones_trgm'] || indexMap['idx_pessoas_telwa_trgm'] || indexMap['idx_pessoas_phone_trgm'];
+      if (hasTrgm && phoneIdx) {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
-      } else {
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${addParam(digitParam)}`);
-      }
-
-      if (hasTrgm && (indexMap['idx_pessoas_phone_trgm'] || indexMap['idx_pessoas_phones_trgm'])) {
         subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
       } else {
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${addParam(digitParam)}`);
+        const dp = addParam(digitParam);
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${dp}`);
+        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${dp}`);
       }
 
       // 6. Generic fields (Non-indexed, use LIKE)
@@ -292,7 +292,7 @@ async function searchClient(query) {
     `;
 
     const result = await pool.query(sql, params);
-    return { rows: result.rows };
+    return { rows: result.rows || [] };
   } catch (e) {
     const errorMsg = `SEARCH_ERROR: ${e.message}. Query: ${query}`;
     await logError('SEARCH', new Error(errorMsg));

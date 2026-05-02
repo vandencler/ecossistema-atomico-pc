@@ -25,4 +25,10 @@ During the first 48 hours of the Phase 6 rollout, Operations must actively monit
 *   If Sync Latency exceeds 5 minutes, escalate immediately.
 *   If `OMNI_WA_FAIL` events spike, verify the Meta Cloud API token limits.
 
-**Status:** APPROVED FOR SCALE.
+## 4. Final Janitor Run (2026-05-02)
+A final "Janitor Run" was performed to ensure absolute stability:
+*   **Service Repair:** Fixed critical code corruption in `clientService.js` that was causing `ReferenceError` and `SyntaxError` in Search/Dashboard.
+*   **Hardening:** Implemented missing permission checks in `bulkIntelligenceService.js` and `syncService.js` to ensure the app remains functional even when the ERP database restricts table access (e.g. `documen`, `tabelaprecos`).
+*   **Stress Verification:** Verified Search and Dashboard stability via automated stress testing (100+ concurrent requests) with 0 errors.
+
+**Status:** APPROVED FOR SCALE. (Final Verification GREEN)

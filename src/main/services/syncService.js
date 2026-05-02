@@ -94,30 +94,40 @@ async function getSyncStatus() {
       let target;
       try {
         target = resolveSyncTarget(row.campo);
+        
+        const mirrorVal = await pool.query(
+          `SELECT ${row.campo} FROM ${target.tableName} WHERE idpessoa = CAST($1 AS text)`,
+          [row.idpessoa]
+        );
+        const valorMirror = mirrorVal.rows[0]?.[row.campo];
+        
+        return {
+          id: row.id,
+          idpessoa: row.idpessoa,
+          nome_pessoa: row.nome_pessoa,
+          campo: row.campo,
+          tabela_origem: target.source,
+          targetTable: target.tableName,
+          valorLocal: row.valor_novo,
+          valorMirror: valorMirror,
+          approvedBy: row.aprovado_por,
+          approvedAt: row.aprovado_em,
+          needsSync: String(row.valor_novo) !== String(valorMirror ?? ''),
+          previewSql: `UPDATE ${target.tableName} SET ${row.campo} = CAST($1 AS text) WHERE idpessoa = CAST($2 AS text)`
+        };
       } catch (error) {
-        return { ...row, needsSync: false, blocked: true, error: error.message };
+        console.warn(`[SYNC] Falha ao verificar status para item ${row.id}: ${error.message}`);
+        return { 
+          ...row, 
+          needsSync: false, 
+          blocked: true, 
+          error: error.message,
+          tabela_origem: 'ERRO',
+          targetTable: 'ERRO',
+          valorLocal: row.valor_novo,
+          valorMirror: '???'
+        };
       }
-
-      const mirrorVal = await pool.query(
-        `SELECT ${row.campo} FROM ${target.tableName} WHERE idpessoa = CAST($1 AS text)`,
-        [row.idpessoa]
-      );
-      const valorMirror = mirrorVal.rows[0]?.[row.campo];
-      
-      return {
-        id: row.id,
-        idpessoa: row.idpessoa,
-        nome_pessoa: row.nome_pessoa,
-        campo: row.campo,
-        tabela_origem: target.source,
-        targetTable: target.tableName,
-        valorLocal: row.valor_novo,
-        valorMirror: valorMirror,
-        approvedBy: row.aprovado_por,
-        approvedAt: row.aprovado_em,
-        needsSync: String(row.valor_novo) !== String(valorMirror ?? ''),
-        previewSql: `UPDATE ${target.tableName} SET ${row.campo} = CAST($1 AS text) WHERE idpessoa = CAST($2 AS text)`
-      };
     }));
 
     return {
