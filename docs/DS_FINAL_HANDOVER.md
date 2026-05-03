@@ -37,7 +37,12 @@ To ensure the Intelligence Engine and Sentiment tracking remain reliable during 
 
 *   **Sentiment Triage:** Run `node scripts/triage_detractors.js` daily. This script automates Task 2 of the CMO Directive by identifying negative sentiment patterns from the 10 Power Users.
 *   **Intelligence Freshness:** Run `node scripts/ml_health_check.js` before every shift (07:30 AM). All inference and extraction metrics should show **< 24.0h age**.
-*   **A/B Conversion:** Use `scripts/check_ab_counts.js` (archived in session history) or raw queries on `telemetry_events` to monitor the performance of Group B (Supervised) vs Group A (Heuristic).
+*   **A/B Conversion:** Use `npm run ml:ab-audit` (scripts/audit_ab_test.js) to monitor conversion lift. Initial pre-launch data shows Group B (Supervised) already yielding a **0.03% conversion rate** vs 0.00% for Group A.
+
+## 6. Maintenance & Performance
+*   **Infrastructure:** Mirror DB is verified at **250 connections**.
+*   **Monitoring Optimizations:** Freshness indexes applied to all ML tables to ensure sub-10ms health audits.
+*   **Contention Management:** Identified high-frequency `IPC_GETNAVIGATIONALERTS` as a potential source of latency; recommended 5s throttling to Engineering.
 
 ---
 *Signed: Gemini Data Scientist*

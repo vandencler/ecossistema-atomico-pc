@@ -9,26 +9,19 @@ if (!cwd.toLowerCase().includes('-pc')) {
 const { pool } = require('../src/main/db');
 
 async function verify() {
-  const idpessoa = '01000018N3'; // Sample ID
+  const idproduto = '0100000001'; // Sample ID
   const query = `
     EXPLAIN (ANALYZE, BUFFERS)
-    SELECT pr.nmproduto, pr.cdchamada,
-           SUM(di.qtitem) AS qtd_total,
-           SUM(di.vlitem) AS valor_total,
-           COUNT(DISTINCT di.iddocumento) AS vezes_comprado
-    FROM wshop.docitem di
-    JOIN wshop.produto pr ON pr.idproduto = di.idproduto
-    JOIN wshop.documen d ON d.iddocumento = di.iddocumento
-    WHERE di.idpessoa = CAST($1 AS text) AND d.tpoperacao = 'V'
-      AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
-    GROUP BY pr.nmproduto, pr.cdchamada
-    ORDER BY valor_total DESC
+    SELECT idpessoa, SUM(qtitem) as total_qty
+    FROM wshop.docitem
+    WHERE idproduto = CAST($1 AS text)
+    GROUP BY idpessoa
     LIMIT 10
   `;
 
   try {
-    console.log('=== Index Usage Verification (idx_docitem_idpessoa) ===');
-    const res = await pool.query(query, [idpessoa]);
+    console.log('=== Index Usage Verification (idx_docitem_idproduto) ===');
+    const res = await pool.query(query, [idproduto]);
     res.rows.forEach(row => {
       console.log(row['QUERY PLAN']);
     });
