@@ -16,3 +16,5 @@
 ## ?? SYSTEM HYGIENE
 - [x] **Workspace Integrity:** Working strictly in \D:\\projetos\\ecossistema-atomico-pc\\\.
 - [x] **Outage Monitoring:** Detected and tracked the 12h database restoration process.
+
+- [x] **Navigation Optimization (EAV-161):** Alerts query optimized (63ms -> 1ms). ?

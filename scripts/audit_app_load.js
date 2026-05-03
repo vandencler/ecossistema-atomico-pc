@@ -11,10 +11,11 @@ const { ecoPool } = require('../src/main/db');
 async function run() {
   try {
     const res = await ecoPool.query(`
-      SELECT * FROM log_eventos 
-      WHERE criado_em > now() - interval '2 hours' 
-      ORDER BY criado_em DESC 
-      LIMIT 50
+      SELECT user_id, count(*) 
+      FROM telemetry_events 
+      WHERE event_name = 'APP_LOAD' 
+      GROUP BY 1 
+      ORDER BY count DESC
     `);
     console.table(res.rows);
   } catch (e) {
