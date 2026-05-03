@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Identifying users running the wrong code...");
+        console.log('Identifying users running the wrong code...');
         const res = await ecoPool.query(`
             SELECT 
                 user_id,
@@ -16,7 +16,7 @@ async function run() {
         `);
         console.table(res.rows);
     } catch (e) {
-        console.error("Analysis failed:", e.message);
+        console.error('Analysis failed:', e.message);
     } finally {
         process.exit();
     }

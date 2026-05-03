@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Testing original query performance...");
+        console.log('Testing original query performance...');
         const start1 = Date.now();
         await ecoPool.query(`
           SELECT
@@ -12,7 +12,7 @@ async function run() {
         const duration1 = Date.now() - start1;
         console.log(`Original duration: ${duration1}ms`);
 
-        console.log("Testing optimized query performance...");
+        console.log('Testing optimized query performance...');
         const start2 = Date.now();
         await ecoPool.query(`
           SELECT
@@ -25,7 +25,7 @@ async function run() {
         console.log(`Optimized duration: ${duration2}ms`);
 
     } catch (e) {
-        console.error("Test failed:", e.message);
+        console.error('Test failed:', e.message);
     } finally {
         process.exit();
     }

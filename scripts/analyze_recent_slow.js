@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Analyzing last 10 slow queries...");
+        console.log('Analyzing last 10 slow queries...');
         const res = await ecoPool.query(`
             SELECT 
                 payload->>'sql' as sql,
@@ -15,7 +15,7 @@ async function run() {
         `);
         console.table(res.rows);
     } catch (e) {
-        console.error("Check failed:", e.message);
+        console.error('Check failed:', e.message);
     } finally {
         process.exit();
     }

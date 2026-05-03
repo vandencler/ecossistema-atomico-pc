@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Checking for recent errors in telemetry (last 15m)...");
+        console.log('Checking for recent errors in telemetry (last 15m)...');
         const res = await ecoPool.query(`
             SELECT tipo, idpessoa, detalhe, criado_em 
             FROM log_eventos 
@@ -11,7 +11,7 @@ async function run() {
         `);
         console.table(res.rows);
     } catch (e) {
-        console.error("Check failed:", e.message);
+        console.error('Check failed:', e.message);
     } finally {
         process.exit();
     }

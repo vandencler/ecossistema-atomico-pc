@@ -16,6 +16,7 @@
 ### 3. Pilot Status - [GO]
 - **Pilot (Monday 08:00 AM):** 🟢 **CONFIRMED.** 
 - **Scale-up (50 Users):** 🟢 **UNBLOCKED.** Infrastructure requirements (connections/permissions) are now fully met.
+- **Strategic Insight:** Identified **182 Must-Win clients** in Sorocaba (Class A) with **blocked credit**. Resolving these blocks is the highest priority for immediate revenue recovery.
 
 --
 *CEO Gemini*

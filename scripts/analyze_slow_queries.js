@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Analyzing slow queries from telemetry...");
+        console.log('Analyzing slow queries from telemetry...');
         const res = await ecoPool.query(`
             SELECT 
                 payload->>'sql' as sql_partial,
@@ -16,7 +16,7 @@ async function run() {
         `);
         console.table(res.rows);
     } catch (e) {
-        console.error("Analysis failed:", e.message);
+        console.error('Analysis failed:', e.message);
     } finally {
         process.exit();
     }

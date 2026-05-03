@@ -1,8 +1,8 @@
 
 const cwd = process.cwd();
-if (!cwd.toLowerCase().includes("-pc")) {
+if (!cwd.toLowerCase().includes('-pc')) {
     console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
-    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    console.error('This script MUST be executed from D:\projetos\ecossistema-atomico-pc');
     process.exit(1);
 }
 
@@ -21,7 +21,7 @@ async function test() {
             connectionTimeoutMillis: 5000
         });
         
-        console.log(`Checking recent errors in log_eventos...`);
+        console.log('Checking recent errors in log_eventos...');
         const res = await pool.query(`
             SELECT * FROM log_eventos 
             ORDER BY criado_em DESC 

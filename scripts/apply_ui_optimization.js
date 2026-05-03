@@ -1,6 +1,6 @@
-const fs = require("fs");
-const path = "src/main/services/uiService.js";
-let code = fs.readFileSync(path, "utf8");
+const fs = require('fs');
+const path = 'src/main/services/uiService.js';
+let code = fs.readFileSync(path, 'utf8');
 
 const oldQuery = `          SELECT
             COUNT(*) FILTER (WHERE tipo_acao = 'ALTERAR_CAMPO' AND COALESCE(status, 'PENDENTE') = 'PENDENTE') as sav_count,
@@ -15,4 +15,4 @@ const newQuery = `          SELECT
 
 code = code.replace(oldQuery, newQuery);
 fs.writeFileSync(path, code);
-console.log("Optimized navigation alerts query in uiService.js");
+console.log('Optimized navigation alerts query in uiService.js');

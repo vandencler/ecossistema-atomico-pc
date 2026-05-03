@@ -1,7 +1,7 @@
-const { ecoPool } = require("../src/main/db");
+const { ecoPool } = require('../src/main/db');
 async function run() {
     try {
-        console.log("Checking for recent slow queries (last 15m)...");
+        console.log('Checking for recent slow queries (last 15m)...');
         const res = await ecoPool.query(`
             SELECT count(*) 
             FROM telemetry_events 
@@ -10,7 +10,7 @@ async function run() {
         `);
         console.log(`Slow queries: ${res.rows[0].count}`);
     } catch (e) {
-        console.error("Check failed:", e.message);
+        console.error('Check failed:', e.message);
     } finally {
         process.exit();
     }

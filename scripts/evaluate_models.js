@@ -129,7 +129,7 @@ function evaluateChurnModel() {
     // Sample validation
     profiles.slice(0, 500).forEach(row => {
       const parts = row.split(',');
-      const gender = parts[5];
+      const gender = parts[1]; // Correct index for 'sexo'
       if (gender === 'Masculino' || gender === 'Feminino') {
         // Assume we recommended a biased product
         // This is a statistical validation of the filter logic

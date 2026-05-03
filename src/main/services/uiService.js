@@ -188,9 +188,10 @@ class UIService {
       const urgencyHours = await getConfigValue('sav_urgency_hours', '4');
       const counts = await ecoPool.query(`
         SELECT 
-          COUNT(*) FILTER (WHERE tipo_acao = 'ALTERAR_CAMPO' AND COALESCE(status, 'PENDENTE') = 'PENDENTE') as sav_count,
-          COUNT(*) FILTER (WHERE status = 'PENDENTE' AND (origem = 'MANUAL' AND criado_em < NOW() - ($1 || ' hours')::interval)) as sav_urgent
+          COUNT(*) FILTER (WHERE tipo_acao = 'ALTERAR_CAMPO') as sav_count,
+          COUNT(*) FILTER (WHERE origem = 'MANUAL' AND criado_em < NOW() - ($1 || ' hours')::interval) as sav_urgent
         FROM acoes_pendentes
+        WHERE status = 'PENDENTE'
       `, [urgencyHours]);
       
       return {

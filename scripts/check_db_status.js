@@ -1,4 +1,4 @@
-const { getDbStatus } = require("../src/main/services/configService");
+const { getDbStatus } = require('../src/main/services/configService');
 async function run() {
     try {
         const status = await getDbStatus();

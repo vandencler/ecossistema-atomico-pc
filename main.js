@@ -260,7 +260,14 @@ ipcMain.handle('get-executive-metrics', async () => {
   try {
     const { ecoPool } = require('./src/main/db');
 
-    const savRes = await ecoPool.query("SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'PENDENTE') as pending FROM acoes_pendentes");
+    const savRes = await ecoPool.query(`
+      SELECT 
+        (SELECT COUNT(*) FROM acoes_pendentes) as total,
+        COUNT(*) as pending 
+      FROM acoes_pendentes 
+      WHERE status = 'PENDENTE'
+    `);
+
     const waRes = await ecoPool.query("SELECT COUNT(*) as total FROM omnichannel_mensagens WHERE criado_em > CURRENT_TIMESTAMP - INTERVAL '24 hours'");
     const clientRes = await ecoPool.query('SELECT COUNT(*) as total FROM ml_churn_risk WHERE risk_score > 70');
 
