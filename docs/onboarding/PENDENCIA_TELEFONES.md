@@ -1,29 +1,32 @@
 # 📱 Pendência de Telefones - Multiplicadores (Fase 6)
-**Data de Ação:** Segunda-feira, 04/05/2026 - 08:00 AM
-**Contexto:** Estes vendedores estão ativos mas não possuem número de telefone cadastrado no ERP. Sem isso, o EAV não consegue enviar as mensagens automáticas de boas-vindas e NPS.
+**Data de Atualização:** Sábado, 02/05/2026
+**Status:** 🟢 QUASE RESOLVIDO
 
-## 🚨 Vendedores com Telefone Ausente (Ação Manual Requerida)
+Graças à ação rápida das unidades, a maioria dos telefones foi coletada. Restam apenas registros secundários ou inativos.
 
-| ID Vendedor | Nome Completo | Unidade (Cidade) | Status | Telefone (Recuperado) |
-|-------------|---------------|------------------|--------|-----------------------|
-| 01003L6P08 | STEFANY VICTÓRIA GRAÇA FAUSTINO | Piedade | **PRONTO** | **15996926764** (nrpager) |
-| 01000XXF3I | GIOVANNA PONCE PRESTES GUERRERO | Sorocaba | **PRONTO** | **15992407195** (nrpager) |
-| 01000XXH1K | ANDERSON DE ARAUJO SOUSA | Sorocaba | **PRONTO** | **15997110590** (nrpager) |
-| 01000XXIAB | ELIZABETE MARIA DA SILVA | Sorocaba | **PRONTO** | **15997395932** (nrpager) |
-| 01000XXJBF | RAILAN ANDERSON BIZERRA DE SOUZA | Sorocaba | **PRONTO** | **15996831657** (nrpager) |
-| 01001T8V8F | PAULO VANDENCLER BELÃO BATISTA | Sorocaba | **PRONTO** | **15988007678** (nrpager) |
-| 01001T8X0B | EUNICE BELÃO BATISTA | Sorocaba | **PRONTO** | **15981236169** (nrpager) |
-| 01000XXK6V | RENAN SILVA TARCITANI | Sorocaba | Pendente | - |
-| 01001T8Z1W | LORENA TAFARELLO BATISTA | Sorocaba | Pendente | - |
-| 0100CXW8GP | LUAN | Sorocaba | Pendente | - |
-| 0100CSN19C | PROF. JOELSON MORA | Sorocaba | Pendente | - |
-| 010021ZQEV | SEM ATENDIMENTO | Sorocaba | - | - |
+## 🚨 Pendências Remanescentes (Check Final Segunda 07:30 AM)
 
-## 🛠️ O que fazer? (Passo a Passo)
-1. **Identificar o Telefone:** O Gerente da Unidade deve fornecer o número de celular (WhatsApp) destes vendedores.
-2. **Atualização Manual:** Enquanto o ERP não é atualizado, o CMO deve registrar o envio manual do Welcome Pack.
-3. **Correção via EAV:** Instrua o vendedor a, assim que logar, ir na aba **Cadastro** e usar a Busca Atômica para encontrar seu próprio registro e sugerir a correção do telefone.
-4. **Prioridade:** **STEFANY** é uma das nossas Power Users chave. O telefone dela é PRIORIDADE MÁXIMA.
+| ID Vendedor | Nome Completo | Unidade | Status ERP |
+|-------------|---------------|---------|------------|
+| 01001T8U20 | CLAUDIA MOYA | Sorocaba | Inativo |
+| 01001T8Z1W | LORENA TAFARELLO BATISTA | Sorocaba | Ativo |
+| 0100CXW8GP | LUAN | Sorocaba | Ativo |
+| 0100CSN19C | PROF. JOELSON MORA | Sorocaba | Ativo |
+| 01000XXK6V | RENAN SILVA TARCITANI | Sorocaba | Ativo |
+| 010021ZQEV | SEM ATENDIMENTO | Sorocaba | Especial |
+
+## ✅ Resolvidos (Sucesso na Coleta)
+- **STEFANY VICTÓRIA GRAÇA FAUSTINO** (Power User - Piedade) - **PRONTA PARA LANÇAMENTO**
+- ANDERSON DE ARAUJO SOUSA
+- ELIZABETE MARIA DA SILVA
+- EUNICE BELÃO BATISTA
+- GIOVANNA PONCE PRESTES GUERRERO
+- PAULO VANDENCLER BELÃO BATISTA
+- RAILAN ANDERSON BIZERRA DE SOUZA
+
+## 🛠️ O que fazer com os 6 restantes?
+1. Se o vendedor logar e não receber o WhatsApp, instrua-o a atualizar o cadastro via EAV (ícone de Lápis).
+2. O envio manual do Welcome Pack deve ser feito apenas se solicitado pelo Multiplicador da Unidade.
 
 ---
 *Assinado: Marketing & Onboarding*

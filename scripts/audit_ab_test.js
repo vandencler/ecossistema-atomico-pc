@@ -1,3 +1,11 @@
+
+const cwd = process.cwd();
+if (!cwd.toLowerCase().includes("-pc")) {
+    console.error(`[FATAL] WORKSPACE MISMATCH: Running from ${cwd}`);
+    console.error("This script MUST be executed from D:\projetos\ecossistema-atomico-pc");
+    process.exit(1);
+}
+
 const { ecoPool } = require('../src/main/db');
 
 async function auditABTest() {
@@ -6,7 +14,7 @@ async function auditABTest() {
   try {
     // 1. Get Population Counts
     const popRes = await ecoPool.query(`
-      SELECT payload->>'group' as ab_group, count(DISTINCT user_id) as client_count
+      SELECT payload->>'group' as ab_group, count(DISTINCT payload->>'idpessoa') as client_count
       FROM telemetry_events
       WHERE event_name = 'intel_score_calculated'
       GROUP BY 1
@@ -20,7 +28,7 @@ async function auditABTest() {
       SELECT t.ab_group, count(DISTINCT a.idpessoa) as conv_count
       FROM acoes_pendentes a
       JOIN (
-        SELECT DISTINCT user_id as idpessoa, payload->>'group' as ab_group
+        SELECT DISTINCT payload->>'idpessoa' as idpessoa, payload->>'group' as ab_group
         FROM telemetry_events
         WHERE event_name = 'intel_score_calculated'
       ) t ON a.idpessoa = t.idpessoa
