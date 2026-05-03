@@ -14,7 +14,7 @@ async function setupOnboardingConfigs() {
   const configs = [
     {
       chave: 'omni_welcome_message',
-      valor: 'Olá! Você acaba de ser ativado como Multiplicador do EAV Fase 6! 🚀 Sua missão é liderar a transformação digital na sua unidade. O sistema já conta com Modo Offline, Busca Atômica e Inteligência de Vendas.',
+      valor: 'Olá! Você acaba de ser ativado no EAV v1.1.2! 🚀 Sua missão é liderar a transformação digital na sua unidade. Dica Pro: Se o menu sumir, clique no logo flutuante no canto da tela! O sistema conta com Modo Offline, Busca Atômica e Inteligência.',
       descricao: 'Mensagem de boas-vindas para novos usuários (WhatsApp)'
     },
     {

@@ -1,4 +1,4 @@
-const { pool, ecoPool } = require('../db');
+﻿const { pool, ecoPool } = require('../db');
 const { logEvent, logError } = require('./logService');
 const { trackEvent } = require('./telemetryService');
 const { FIELD_CONFIG, isBirthdayToday, daysSince } = require('../utils');
@@ -288,7 +288,7 @@ async function getActionQueue(filters = {}) {
 
     if (f.status !== 'TODOS') {
       params.push(f.status);
-      where.push(`COALESCE(status, 'PENDENTE') = $${params.length}`);
+      where.push(`status = $${params.length}`);
     }
     if (f.campo) {
       params.push(f.campo);
@@ -319,7 +319,7 @@ async function getActionQueue(filters = {}) {
       FROM acoes_pendentes
       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
       ORDER BY
-        CASE COALESCE(status, 'PENDENTE')
+        CASE status
           WHEN 'PENDENTE' THEN 1
           WHEN 'APROVADO' THEN 2
           WHEN 'ERRO' THEN 3

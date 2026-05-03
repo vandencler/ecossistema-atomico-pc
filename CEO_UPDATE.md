@@ -16,6 +16,7 @@
 ### 3. Pilot Status - [GO]
 - **Pilot (Monday 08:00 AM):** 🟢 **CONFIRMED.** 
 - **Scale-up (50 Users):** 🟢 **UNBLOCKED.** Infrastructure requirements (connections/permissions) are now fully met.
+- **Wave 2 Readiness:** Generated **11 regional activation lists** covering 13,000+ clients to support the 40 additional representatives in Wave 2. See `docs/onboarding/WAVE2_EXPANSION_PLAN.md`.
 - **Strategic Insight:** Identified **182 Must-Win clients** in Sorocaba (Class A) with **blocked credit**. Resolving these blocks is the highest priority for immediate revenue recovery.
 
 --

@@ -49,14 +49,14 @@ function _readRawConfig() {
 
 function getConfig() {
   if (safeConfigCache) return JSON.parse(JSON.stringify(safeConfigCache));
-  
+
   const config = _readRawConfig();
-  
+
   // Strip passwords for UI safety
   const safeConfig = JSON.parse(JSON.stringify(config));
   if (safeConfig.databases?.mirror) delete safeConfig.databases.mirror.password;
   if (safeConfig.databases?.ecosystem) delete safeConfig.databases.ecosystem.password;
-  
+
   safeConfigCache = safeConfig;
   return safeConfig;
 }
@@ -64,9 +64,9 @@ function getConfig() {
 async function saveConfig(newConfig) {
   try {
     if (!newConfig || typeof newConfig !== 'object') throw new Error('Configuração inválida');
-    
+
     const current = _readRawConfig(); // Read raw to preserve passwords
-    
+
     const updated = {
       databases: {
         mirror: { ...(current.databases?.mirror || {}), ...(newConfig.databases?.mirror || {}) },
@@ -75,7 +75,7 @@ async function saveConfig(newConfig) {
       settings: { ...(current.settings || {}), ...(newConfig.settings || {}) }
     };
 
-    // Restore passwords if they were omitted in the update (likely because UI doesn't see them)
+    // Restore passwords if they were omitted in the update
     if (newConfig.databases?.mirror && !newConfig.databases.mirror.password && current.databases?.mirror?.password) {
       updated.databases.mirror.password = current.databases.mirror.password;
     }
@@ -84,11 +84,11 @@ async function saveConfig(newConfig) {
     }
 
     fs.writeFileSync(LOCAL_CONFIG_PATH, JSON.stringify(updated, null, 2), 'utf8');
-    
+
     // Invalidate cache
     rawConfigCache = null;
     safeConfigCache = null;
-    
+
     return { ok: true };
   } catch (error) {
     console.error('Falha ao salvar config.local.json:', error.message);
@@ -102,12 +102,12 @@ async function getSystemConfigs() {
   if (systemConfigsListCache) return JSON.parse(JSON.stringify(systemConfigsListCache));
   try {
     const res = await ecoPool.query('SELECT chave, valor, descricao FROM config_sistema ORDER BY chave');
-    
+
     // Populate individual caches
     for (const row of res.rows) {
       systemConfigCache.set(row.chave, row.valor);
     }
-    
+
     systemConfigsListCache = { rows: res.rows };
     return JSON.parse(JSON.stringify(systemConfigsListCache));
   } catch (e) {
@@ -124,11 +124,11 @@ async function setSystemConfig(chave, valor) {
         valor = EXCLUDED.valor,
         atualizado_em = NOW()
     `, [chave, String(valor)]);
-    
+
     // Invalidate cache
     systemConfigsListCache = null;
     systemConfigCache.delete(chave);
-    
+
     return { ok: true };
   } catch (e) {
     return { error: e.message };
@@ -151,6 +151,40 @@ async function getConfigValue(chave, fallback) {
     return valor;
   } catch {
     return fallback;
+  }
+}
+
+async function getConfigValues(chaves) {
+  if (!Array.isArray(chaves) || chaves.length === 0) return {};
+
+  const results = {};
+  const missing = [];
+
+  for (const chave of chaves) {
+    if (systemConfigCache.has(chave)) {
+      results[chave] = systemConfigCache.get(chave);
+    } else {
+      missing.push(chave);
+    }
+  }
+
+  if (missing.length === 0) return results;
+
+  try {
+    const res = await ecoPool.query('SELECT chave, valor FROM config_sistema WHERE chave = ANY($1::text[])', [missing]);
+    for (const row of res.rows) {
+      systemConfigCache.set(row.chave, row.valor);
+      results[row.chave] = row.valor;
+    }
+    // Mark remaining missing as undefined in cache
+    for (const chave of missing) {
+      if (!(chave in results)) {
+        systemConfigCache.set(chave, undefined);
+      }
+    }
+    return results;
+  } catch {
+    return results;
   }
 }
 
@@ -207,6 +241,6 @@ module.exports = {
   getSystemConfigs,
   setSystemConfig,
   getConfigValue,
+  getConfigValues,
   validateConfig
 };
-
