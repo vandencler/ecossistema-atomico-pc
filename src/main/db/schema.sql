@@ -229,6 +229,8 @@ CREATE TABLE IF NOT EXISTS ranking_cache (
     calculado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_ranking_cache_freshness ON ranking_cache(calculado_em DESC);
+
 -- Table for system configurations
 CREATE TABLE IF NOT EXISTS config_sistema (
     chave VARCHAR(64) PRIMARY KEY,
@@ -278,6 +280,11 @@ CREATE INDEX IF NOT EXISTS idx_acoes_entidade ON acoes_pendentes(entidade, id_en
 CREATE INDEX IF NOT EXISTS idx_acoes_historico_acao ON acoes_historico(acao_id);
 CREATE INDEX IF NOT EXISTS idx_correcoes_pessoa ON correcoes_campos(idpessoa);
 CREATE INDEX IF NOT EXISTS idx_acoes_pessoa ON acoes_pendentes(idpessoa);
+
+-- New performance indexes for EAV-167
+CREATE INDEX IF NOT EXISTS idx_acoes_pendentes_covering_queue ON acoes_pendentes (status, criado_em DESC, tipo_acao, origem, campo, entidade);
+CREATE INDEX IF NOT EXISTS idx_acoes_pendentes_ordered_logic ON acoes_pendentes ((CASE status WHEN 'PENDENTE' THEN 1 WHEN 'APROVADO' THEN 2 WHEN 'ERRO' THEN 3 WHEN 'REJEITADO' THEN 4 WHEN 'CONCLUIDO' THEN 5 ELSE 9 END), criado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_acoes_pending_stats_opt ON acoes_pendentes(tipo_acao, origem, criado_em) WHERE status = 'PENDENTE';
 
 -- Trigger for Real-Time SAV Sync
 CREATE OR REPLACE FUNCTION notify_sav_approved()
@@ -330,4 +337,34 @@ CREATE TABLE IF NOT EXISTS app_feedback (
     device_info JSONB,
     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table for tracking system health snapshots over time (EAV-177)
+CREATE TABLE IF NOT EXISTS monitoring_snapshots (
+    id SERIAL PRIMARY KEY,
+    snapshot_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) NOT NULL, -- HEALTHY, DEGRADED, CRITICAL
+    metrics JSONB NOT NULL,
+    summary TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_monitoring_snapshot_time ON monitoring_snapshots(snapshot_time DESC);
+CREATE INDEX IF NOT EXISTS idx_monitoring_status ON monitoring_snapshots(status);
+
+-- Table for Governed Production Writes (Purge Queue)
+-- Tracks all automated write-backs to the Principal DB (.103)
+CREATE TABLE IF NOT EXISTS purge_queue (
+    id SERIAL PRIMARY KEY,
+    operation_type VARCHAR(50) NOT NULL, -- e.g., 'WAError_WRITEBACK'
+    target_table VARCHAR(64) NOT NULL,
+    target_id VARCHAR(80) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING', -- PENDING, COMPLETED, ERROR
+    error_msg TEXT,
+    usuario VARCHAR(100) DEFAULT 'sistema',
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    processado_em TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_purge_status ON purge_queue(status);
+CREATE INDEX IF NOT EXISTS idx_purge_type ON purge_queue(operation_type);
 

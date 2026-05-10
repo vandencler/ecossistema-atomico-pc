@@ -2,6 +2,8 @@
 const { logEvent, logError } = require('./logService');
 const { trackEvent } = require('./telemetryService');
 const { getConfigValue } = require('./configService');
+const { normalizeBrazilianPhone } = require('../utils');
+const purgeService = require('./purgeService');
 
 /**
  * Omnichannel Service
@@ -15,20 +17,12 @@ class OmnichannelService {
    */
   sanitizePhone(raw) {
     if (!raw) return null;
-    let digits = String(raw).replace(/\D/g, '');
+    
+    // Use the standardized normalization logic (adds 9th digit if missing)
+    const normalized = normalizeBrazilianPhone(raw);
+    if (!normalized) return null;
 
-    // Remove leading zero from area code (DDD) if present (e.g., 021... -> 21...)
-    if (digits.startsWith('0') && digits.length >= 11) {
-      digits = digits.substring(1);
-    }
-
-    if (digits.length >= 10 && digits.length <= 11) {
-      return `55${digits}`;
-    } else if (digits.length >= 12 && digits.length <= 13 && digits.startsWith('55')) {
-      return digits;
-    }
-
-    return null;
+    return `55${normalized}`;
   }
 
   /**
@@ -137,6 +131,11 @@ class OmnichannelService {
       return { ok: true, phone, externalId: mockExternalId };
     } catch (e) {
       await logError('OMNI_WA_API', e, idpessoa);
+      
+      // Proactive Governance: Record the failure in the ERP via PurgeService
+      // This allows the ERP to flag the phone as potentially invalid.
+      await purgeService.recordWAError(idpessoa, phone, e.message);
+
       return { ok: false, error: e.message };
     }
   }

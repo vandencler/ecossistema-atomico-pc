@@ -70,9 +70,22 @@ ecoPoolBase.on('error', (err) => {
   console.error('Erro inesperado no Pool ECOSYSTEM:', err.message);
 });
 
+const originalPoolBase = new Pool(dbConfig('production', 'PRODUCTION', {
+  host: '192.168.2.103',
+  port: 5432,
+  database: 'ALTERDATA_SHOP',
+  user: 'eav_updater',
+  max: 3
+}));
+
+originalPoolBase.on('error', (err) => {
+  console.error('Erro inesperado no Pool PRODUCTION:', err.message);
+});
+
 // Throttlers to prevent overloading the databases
 const mirrorThrottler = new Throttler('MIRROR', settings.throttleMirror, 15);
 const ecoThrottler = new Throttler('ECOSYSTEM', settings.throttleEco, 30);
+const originalThrottler = new Throttler('PRODUCTION', 2, 60); // Very restrictive for production
 
 
 // Proxy wrapper to track slow queries
@@ -87,7 +100,7 @@ function createPoolProxy(poolInstance, label) {
             const res = await value.apply(target, args);
             const duration = Date.now() - start;
 
-            if (duration > 100 && process.env.NODE_ENV !== 'test') {
+            if (duration > 100 && label !== 'ecosystem' && process.env.NODE_ENV !== 'test') {
               try {
                 // Late require to avoid circular dependencies
                 const { trackEvent } = require('./services/telemetryService');
@@ -123,11 +136,20 @@ const ecoPool = {
   throttler: ecoThrottler
 };
 
+const originalPool = {
+  query: (text, params) => originalThrottler.run(() => originalPoolBase.query(text, params)),
+  connect: () => originalPoolBase.connect(),
+  raw: originalPoolBase,
+  throttler: originalThrottler
+};
+
 const proxiedPool = createPoolProxy(pool, 'mirror');
 const proxiedEcoPool = createPoolProxy(ecoPool, 'ecosystem');
+const proxiedOriginalPool = createPoolProxy(originalPool, 'original');
 
 module.exports = {
   pool: proxiedPool,
   ecoPool: proxiedEcoPool,
+  originalPool: proxiedOriginalPool,
   settings
 };
