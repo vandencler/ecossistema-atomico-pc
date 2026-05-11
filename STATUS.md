@@ -1,15 +1,15 @@
 ﻿# Project Status: Ecossistema Atômico de Vendas (EAV)
 
-**Current State:** 🚨 BLOCKED (Build Mismatch) | 🚀 WAVE 2 RECOVERY PENDING
-**Version:** v1.1.6 (Source) / v1.1.5 (Installer)
+**Current State:** 🟠 RECOVERING | 🚀 WAVE 2 BUILD IN PROGRESS (v1.1.6)
+**Version:** v1.1.6 (Source & CI)
 
 ## Executive Summary
-A critical version mismatch has been identified: source code is at v1.1.6 (with proxy support), but the installer in `dist/` and on GitHub is still v1.1.5. Reps are unable to connect to the new public proxy. System remains at **ZERO ADOPTION** for Wave 2.
-System status is **🚨 BLOCKED**.
+A critical version mismatch and CI branch deadlock were identified. Source was at v1.1.6 but GitHub Actions were configured for `main` (branch is `master`). CEO has fixed the workflow and triggered the v1.1.6 release.
+System status is **🟠 RECOVERING**.
 
 ## 🛠️ Infrastructure & Database
 - **Connectivity:** 🟢 ACTIVE (Public DB Proxy running locally, Tunnel URL: `https://wifi-committed-beneath-discussions.trycloudflare.com`).
-- **Build Status:** 🔴 OBSOLETE (Installer is v1.1.5).
+- **Build Status:** 🔵 BUILDING (v1.1.6 triggered at 18:38Z).
 - **Monitoring:** 🟢 ACTIVE (Restored at 13:30Z).
 - **9th Digit Normalization:** ✅ SUCCESS (EAV-188). 6 records updated.
 - **Search Performance:** stable < 100ms.
