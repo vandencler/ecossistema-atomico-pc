@@ -32,9 +32,20 @@ function readEnv(prefix, key) {
 
 function dbConfig(configKey, envPrefix, fallback) {
   const fileConfig = localConfig.databases?.[configKey] || {};
+  let host = readEnv(envPrefix, 'HOST') || fileConfig.host || fallback.host;
+  
+  const proxyUrl = process.env.ATOMICO_PROXY_URL || localConfig.proxyUrl;
+
+  // Auto-translate internal IP to public proxy to save field reps from manual config
+  // BYPASS: If EAV_DIRECT_DB is set, we connect directly (essential for infra manager)
+  if ((host === '192.168.2.163' || host === '127.0.0.1') && !process.env.EAV_DIRECT_DB) {
+    // Priority: Env Var > localConfig > fallback
+    host = process.env.EAV_PROXY_URL || localConfig.settings?.proxyUrl || 'https://covering-checkout-spam-providers.trycloudflare.com';
+  }
+
   return {
-    host: readEnv(envPrefix, 'HOST') || fileConfig.host || fallback.host,
-    port: readNumber(readEnv(envPrefix, 'PORT') || fileConfig.port, fallback.port),
+    host: host,
+    port: host.startsWith('http') ? 443 : readNumber(readEnv(envPrefix, 'PORT') || fileConfig.port, fallback.port),
     database: readEnv(envPrefix, 'DATABASE') || fileConfig.database || fallback.database,
     user: readEnv(envPrefix, 'USER') || fileConfig.user || fallback.user,
     password: readEnv(envPrefix, 'PASSWORD') || fileConfig.password || fallback.password || '',
