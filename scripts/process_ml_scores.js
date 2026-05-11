@@ -73,6 +73,27 @@ async function processChurnScores() {
       const probability = sigmoid(z);
       const riskScore = probability * 100;
       
+      // Reason Classification
+      let reasonCode = 'NORMAL_VARIATION';
+      let reasonDetail = 'Variação normal no ciclo de compra.';
+
+      if (rec > 365) {
+        reasonCode = 'INACTIVE_LONG_TERM';
+        reasonDetail = 'Cliente inativo há mais de um ano.';
+      } else if (rec > 90) {
+        reasonCode = 'HIGH_RECENCY_GAP';
+        reasonDetail = `Atraso significativo: ${Math.round(rec)} dias sem compra.`;
+      } else if (isBlocked) {
+        reasonCode = 'CREDIT_BLOCKED';
+        reasonDetail = 'Risco elevado devido a bloqueio de crédito no ERP.';
+      } else if (freq > 5 && basket < 1.5) {
+        reasonCode = 'LOW_BASKET_DENSITY';
+        reasonDetail = 'Cliente frequente mas com cestas muito pequenas (risco de substituição).';
+      } else if (div < 2 && freq > 3) {
+        reasonCode = 'LOW_CATEGORY_DIVERSITY';
+        reasonDetail = 'Compra apenas uma categoria; vulnerável a promoções de concorrentes.';
+      }
+      
       // Confidence mapping based on data density
       let confidence = 50.0;
       if (rec > 180 || rec < 15) confidence = 90.0; // Extreme cases are more certain
@@ -83,15 +104,17 @@ async function processChurnScores() {
       nextPurchaseDate.setDate(nextPurchaseDate.getDate() + Math.max(1, Math.round(30 / (freq / 2 || 1))));
 
       await client.query(`
-        INSERT INTO ml_churn_risk (idpessoa, risk_score, confidence, next_purchase_estimate, model_version)
-        VALUES ($1, $2, $3, $4, 'v1.2-supervised-sim')
+        INSERT INTO ml_churn_risk (idpessoa, risk_score, confidence, next_purchase_estimate, model_version, reason_code, reason_detail)
+        VALUES ($1, $2, $3, $4, 'v1.2-supervised-sim', $5, $6)
         ON CONFLICT (idpessoa) DO UPDATE SET
           risk_score = EXCLUDED.risk_score,
           confidence = EXCLUDED.confidence,
           next_purchase_estimate = EXCLUDED.next_purchase_estimate,
           model_version = EXCLUDED.model_version,
+          reason_code = EXCLUDED.reason_code,
+          reason_detail = EXCLUDED.reason_detail,
           calculado_em = CURRENT_TIMESTAMP
-      `, [idpessoa, riskScore.toFixed(2), confidence.toFixed(2), nextPurchaseDate.toISOString().split('T')[0]]);
+      `, [idpessoa, riskScore.toFixed(2), confidence.toFixed(2), nextPurchaseDate.toISOString().split('T')[0], reasonCode, reasonDetail]);
     }
 
     await client.query('COMMIT');

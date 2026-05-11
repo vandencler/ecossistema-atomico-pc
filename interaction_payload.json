@@ -1,0 +1,9 @@
+{
+  "kind": "request_confirmation",
+  "payload": {
+    "version": 1,
+    "prompt": "Approve Trigram Expansion (EAV-194) and Infrastructure Execution?",
+    "description": "The CTO and CEO have both signed off on the technical necessity and safety of the Trigram Expansion. This is critical for Wave 2 performance. Please approve the pending infrastructure request [288b7547](/EAV/approvals/288b7547-8177-4d7e-a0f7-b60b15fb3e82) to unblock the DBA.",
+    "idempotencyKey": "confirmation:EAV-207:trigram-expansion-nudge:v1"
+  }
+}

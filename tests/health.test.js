@@ -17,6 +17,11 @@ const mockEcoPool = {
   query: async () => ({ rows: [{ '1': 1 }] })
 };
 
+const mockOriginalPool = {
+  throttler: { getStats: () => ({ queueLength: 0 }) },
+  query: async () => ({ rows: [{ '1': 1 }] })
+};
+
 const mockLocalDb = {
   getLocalDb: () => ({
     prepare: () => ({
@@ -26,7 +31,7 @@ const mockLocalDb = {
 };
 
 const { checkHealth } = proxyquire('../src/main/services/healthService', {
-  '../db': { pool: mockPool, ecoPool: mockEcoPool },
+  '../db': { pool: mockPool, ecoPool: mockEcoPool, originalPool: mockOriginalPool },
   '../localDb': mockLocalDb,
   './logService': { logError: async () => {}, logEvent: async () => {} }
 });
@@ -36,4 +41,6 @@ test('checkHealth - should detect missing indexes', async () => {
   assert.strictEqual(health.databases.mirror.indexesOptimized, false);
   assert.strictEqual(health.databases.mirror.status, 'OK_BUT_UNOPTIMIZED');
   assert.strictEqual(health.databases.ecosystem.cacheRows, 150);
+  assert.strictEqual(health.databases.production.status, 'OK');
+  assert.strictEqual(health.databases.production.operationalGate, true);
 });

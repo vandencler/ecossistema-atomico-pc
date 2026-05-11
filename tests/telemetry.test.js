@@ -50,7 +50,11 @@ test('TelemetryService - trackEvent and bulk flush', async () => {
   assert.ok(capturedSql.includes('VALUES ($1::text, $2::text, $3::jsonb, $4::timestamptz, $5::uuid)'));
   assert.strictEqual(capturedParams[0], 'test_event');
   assert.strictEqual(capturedParams[1], 'user1');
-  assert.deepStrictEqual(capturedParams[2], { foo: 'bar' });
+  
+  const payload = capturedParams[2];
+  assert.strictEqual(payload.foo, 'bar');
+  assert.ok(payload.version, 'Should have version');
+  assert.ok(payload.session_id, 'Should have session_id');
 
   // 2. Test auto-identity fallback
   telemetryService.setIdentity('test-identity');

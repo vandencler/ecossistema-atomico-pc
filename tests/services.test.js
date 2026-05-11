@@ -21,6 +21,7 @@ test('Search Logic Optimization Check', () => {
 test('checkHealth - should return degraded if DB is down', async () => {
   const mockPool = { query: async () => { throw new Error('DB Down'); } };
   const mockEcoPool = { query: async () => ({ rows: [{ count: 0 }] }) };
+  const mockOriginalPool = { query: async () => ({ rows: [{ '1': 1 }] }) };
   const mockLocalDb = {
     getLocalDb: () => ({
       prepare: () => ({
@@ -29,7 +30,7 @@ test('checkHealth - should return degraded if DB is down', async () => {
     })
   };
   const { checkHealth } = proxyquire('../src/main/services/healthService', {
-    '../db': { pool: mockPool, ecoPool: mockEcoPool },
+    '../db': { pool: mockPool, ecoPool: mockEcoPool, originalPool: mockOriginalPool },
     '../localDb': mockLocalDb,
     './logService': { logError: async () => {}, logEvent: async () => {} }
   });
@@ -78,8 +79,8 @@ test('searchClient - should use granular indexMap for % vs LIKE', async () => {
   assert.ok(capturedSql.includes('LOWER(p.cdchamada) %'));
   // nrcgc_cic has NO index, should use LIKE
   assert.ok(capturedSql.includes('LOWER(p.nrcgc_cic) LIKE'));
-  // phones has index, should use %
-  assert.ok(capturedSql.includes("REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') %"));
+  // phones has index, should use % (matching exact functional index expression in clientService)
+  assert.ok(capturedSql.includes("regexp_replace((COALESCE(p.campostelwhatsapp, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) %"));
 });
 
 test('reconcileCorrections - should detect discrepancies', async () => {

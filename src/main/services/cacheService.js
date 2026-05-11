@@ -1,6 +1,7 @@
 const { pool, ecoPool } = require('../db');
 const { getLocalDb } = require('../localDb');
 const { logEvent, logError } = require('./logService');
+const { normalizeBrazilianPhone } = require('../utils');
 
 async function syncMLScoresToCache() {
   console.log('[CACHE] Sincronizando scores de ML para cache local...');
@@ -111,9 +112,9 @@ async function warmUpCache() {
           client.nmcurto,
           client.nrcgc_cic,
           client.dtultimacompra ? new Date(client.dtultimacompra).toISOString() : null,
-          client.nrtelefone,
-          client.campostelwhatsapp,
-          client.nrpager
+          normalizeBrazilianPhone(client.nrtelefone),
+          normalizeBrazilianPhone(client.campostelwhatsapp),
+          normalizeBrazilianPhone(client.nrpager)
         );
       }
     });

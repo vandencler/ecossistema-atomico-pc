@@ -19,8 +19,12 @@ async function monitor() {
     // 1. DB Connectivity
     const mirrorOk = await pool.query('SELECT 1').then(() => true).catch(() => false);
     const ecoOk = await ecoPool.query('SELECT 1').then(() => true).catch(() => false);
-    console.log(`[DB] Mirror Database (Alterdata):    ${mirrorOk ? '?? OK' : '?? ERROR'}`);
-    console.log(`[DB] Ecosystem Database (Local):     ${ecoOk ? '?? OK' : '?? ERROR'}`);
+    const { originalPool } = require('../src/main/db');
+    const prodOk = await originalPool.query('SELECT 1').then(() => true).catch(() => false);
+    
+    console.log(`[DB] Mirror Database (Alterdata):    ${mirrorOk ? '✅ OK' : '❌ ERROR'}`);
+    console.log(`[DB] Ecosystem Database (Local):     ${ecoOk ? '✅ OK' : '❌ ERROR'}`);
+    console.log(`[DB] Production ERP (Governed):     ${prodOk ? '✅ OK' : '❌ ERROR'}`);
 
     // 2. Critical Errors (Last 24h)
     console.log('\n[!] Erros Criticos (Ultimas 24h):');

@@ -179,7 +179,6 @@ async function searchClient(query) {
     const queryRaw = queryTrimmed.toLowerCase();
     const fullQueryParam = `%${queryRaw}%`;
 
-    // Static parameters at fixed indices
     const params = [
       fullQueryParam, // $1
       queryRaw,       // $2
@@ -187,74 +186,111 @@ async function searchClient(query) {
     ];
 
     const conditions = tokens.map((token) => {
-      const textParam = `%${token}%`;
-      const fuzzyParam = token;
+      const textParamVal = `%${token}%`;
+      const fuzzyParamVal = token;
       const digitsOnly = token.replace(/\D/g, '');
-      const digitParam = digitsOnly.length > 0 ? `%${digitsOnly}%` : '%NOMATCH%';
+      const digitParamVal = digitsOnly.length > 0 ? `%${digitsOnly}%` : null;
+
+      const addParam = (val) => {
+        params.push(String(val));
+        return `CAST($${params.length} AS text)`;
+      };
 
       const subConditions = [];
 
-      // Sequential parameter indexing per token, starting after static params  
-      const addParam = (val) => {
-        params.push(String(val));
-        return 'CAST($' + params.length + ' AS text)';
-      };
-
       // 1. Name matches (Indexed)
       if (hasTrgm && indexMap['idx_pessoas_nmpessoa_trgm']) {
-        subConditions.push(`p.nmpessoa % ${addParam(fuzzyParam)}`);
+        subConditions.push(`p.nmpessoa % ${addParam(fuzzyParamVal)}`);
       } else {
-        subConditions.push(`LOWER(p.nmpessoa) LIKE ${addParam(textParam)}`);
+        subConditions.push(`LOWER(p.nmpessoa) LIKE ${addParam(textParamVal)}`);
       }
 
-      // 2. Short name / Nickname (Indexed)
+      // 2. Short name / Nickname / Trading Name (Indexed)
       if (hasTrgm && indexMap['idx_pessoas_nmcurto_trgm']) {
-        subConditions.push(`p.nmcurto % ${addParam(fuzzyParam)}`);
-        subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParam)}`);
+        subConditions.push(`p.nmcurto % ${addParam(fuzzyParamVal)}`);
+        if (indexMap['idx_pessoas_nmfantasia_trgm']) {
+          subConditions.push(`p.nmfantasia % ${addParam(fuzzyParamVal)}`);
+        } else {
+          subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParamVal)}`);
+        }
       } else {
-        subConditions.push(`LOWER(p.nmcurto) LIKE ${addParam(textParam)}`);
-        subConditions.push(`LOWER(p.nmfantasia) LIKE ${addParam(textParam)}`);
+        const tp = addParam(textParamVal);
+        subConditions.push(`LOWER(p.nmcurto) LIKE ${tp}`);
+        subConditions.push(`LOWER(p.nmfantasia) LIKE ${tp}`);
       }
 
       // 3. Call code (Indexed)
       if (hasTrgm && indexMap['idx_pessoas_cdchamada_trgm']) {
-        subConditions.push(`LOWER(p.cdchamada) % ${addParam(fuzzyParam)}`);
+        subConditions.push(`LOWER(p.cdchamada) % ${addParam(fuzzyParamVal)}`);
       } else {
-        subConditions.push(`LOWER(p.cdchamada) LIKE ${addParam(textParam)}`);
+        subConditions.push(`LOWER(p.cdchamada) LIKE ${addParam(textParamVal)}`);
       }
 
       // 4. Document / CNPJ (Indexed)
       if (hasTrgm && indexMap['idx_pessoas_nrcgc_cic_trgm']) {
-        subConditions.push(`p.nrcgc_cic % ${addParam(fuzzyParam)}`);
+        subConditions.push(`p.nrcgc_cic % ${addParam(fuzzyParamVal)}`);
       } else {
-        subConditions.push(`LOWER(p.nrcgc_cic) LIKE ${addParam(textParam)}`);
+        subConditions.push(`LOWER(p.nrcgc_cic) LIKE ${addParam(textParamVal)}`);
       }
 
-      // 5. Phones (Indexed split)
+      // 5. Phones (Indexed split - Matching EXACT functional index expression)
       const phoneIdx = indexMap['idx_pessoas_phones_trgm'] || indexMap['idx_pessoas_telwa_trgm'] || indexMap['idx_pessoas_phone_trgm'];
       if (hasTrgm && phoneIdx) {
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrpager,''), '[^0-9]', '', 'g') % ${addParam(fuzzyParam)}`);
-      } else {
-        const dp = addParam(digitParam);
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.campostelwhatsapp,''), '[^0-9]', '', 'g') LIKE ${dp}`);
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrtelefone,''), '[^0-9]', '', 'g') LIKE ${dp}`);
-        subConditions.push(`REGEXP_REPLACE(COALESCE(p.nrpager,''), '[^0-9]', '', 'g') LIKE ${dp}`);
+        const fp = addParam(fuzzyParamVal);
+        subConditions.push(`regexp_replace((COALESCE(p.campostelwhatsapp, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) % ${fp}`);
+        subConditions.push(`regexp_replace((COALESCE(p.nrtelefone, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) % ${fp}`);
+        
+        // Use optimized pager index if available
+        if (indexMap['idx_pessoas_pager_trgm']) {
+          subConditions.push(`regexp_replace((COALESCE(p.nrpager, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) % ${fp}`);
+        } else {
+          subConditions.push(`regexp_replace((COALESCE(p.nrpager, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) LIKE ${addParam(`%${digitsOnly}%`)}`);
+        }
+      } else if (digitParamVal) {
+        const dp = addParam(digitParamVal);
+        subConditions.push(`regexp_replace((COALESCE(p.campostelwhatsapp, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) LIKE ${dp}`);
+        subConditions.push(`regexp_replace((COALESCE(p.nrtelefone, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) LIKE ${dp}`);
+        subConditions.push(`regexp_replace((COALESCE(p.nrpager, ''::character varying))::text, '[^0-9]'::text, ''::text, 'g'::text) LIKE ${dp}`);
       }
 
-      // 6. Generic fields (Non-indexed, use LIKE)
-      if (!hasTrgm) {
-        const tp = addParam(textParam);
-        subConditions.push(`LOWER(p.nrincrest_rg) LIKE ${tp}`);
+      // 6. Generic fields & Address Expansion (Optimized if possible)
+      const tp = addParam(textParamVal);
+      const fp = addParam(fuzzyParamVal);
+
+      if (hasTrgm && indexMap['idx_pessoas_email_trgm']) {
+        subConditions.push(`p.email % ${fp}`);
+      } else {
         subConditions.push(`LOWER(p.email) LIKE ${tp}`);
+      }
+
+      if (hasTrgm && indexMap['idx_pessoas_nrincrest_rg_trgm']) {
+        subConditions.push(`p.nrincrest_rg % ${fp}`);
+      } else if (!hasTrgm) {
+        subConditions.push(`LOWER(p.nrincrest_rg) LIKE ${tp}`);
+      }
+
+      if (!hasTrgm) {
         subConditions.push(`LOWER(p.email2) LIKE ${tp}`);
         subConditions.push(`LOWER(p.inscest_pfisica) LIKE ${tp}`);
         subConditions.push(`TO_CHAR(cr.dtdatanasc, 'DD/MM/YYYY') LIKE ${tp}`);
+      }
 
-        if (token.length > 2) {
+      if (token.length > 2) {
+        if (hasTrgm && indexMap['idx_pessoas_nmendereco_trgm']) {
+          subConditions.push(`p.nmendereco % ${fp}`);
+        } else if (!hasTrgm) {
           subConditions.push(`LOWER(COALESCE(p.nmendereco,'')) LIKE ${tp}`);
+        }
+
+        if (hasTrgm && indexMap['idx_pessoas_nmbairro_trgm']) {
+          subConditions.push(`p.nmbairro % ${fp}`);
+        } else if (!hasTrgm) {
           subConditions.push(`LOWER(COALESCE(p.nmbairro,'')) LIKE ${tp}`);
+        }
+
+        if (hasTrgm && indexMap['idx_pessoas_nmcidade_trgm']) {
+          subConditions.push(`p.nmcidade % ${fp}`);
+        } else if (!hasTrgm) {
           subConditions.push(`LOWER(COALESCE(p.nmcidade,'')) LIKE ${tp}`);
         }
       }
@@ -287,10 +323,10 @@ async function searchClient(query) {
       WHERE ${conditions.join(' AND ')}
       ORDER BY
         CASE
-          WHEN p.cdchamada = CAST($3 AS text) THEN 0
-          WHEN LOWER(p.nmpessoa) = CAST($2 AS text) THEN 1
-          WHEN p.nmpessoa LIKE CAST($1 AS text) THEN 2
-          WHEN p.nmcurto LIKE CAST($1 AS text) THEN 3
+          WHEN p.cdchamada = $3::text THEN 0
+          WHEN LOWER(p.nmpessoa) = $2::text THEN 1
+          WHEN p.nmpessoa LIKE $1::text THEN 2
+          WHEN p.nmcurto LIKE $1::text THEN 3
           ELSE 4
         END,
         score DESC,

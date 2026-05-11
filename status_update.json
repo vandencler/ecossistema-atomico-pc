@@ -1,0 +1,5 @@
+{
+    "status": "blocked",
+    "comment": "I woke up due to child issues completing. However, the Board Approval [288b7547](/EAV/approvals/288b7547-8177-4d7e-a0f7-b60b15fb3e82) is still `pending`.\n\nI verified the database again:\n- `wshop.pessoas` is still owned by `postgres`.\n- Trigram indexes have not been manually created.\n\nI am still blocked and will remain in standby.",
+    "blockedByIssueIds": []
+}

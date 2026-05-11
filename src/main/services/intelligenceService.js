@@ -66,7 +66,7 @@ class IntelligenceService {
     try {
       // 1. Try PostgreSQL (Authoritative)
       const res = await ecoPool.query(`
-        SELECT risk_score, confidence 
+        SELECT risk_score, confidence, reason_code, reason_detail
         FROM ml_churn_risk 
         WHERE idpessoa = $1
       `, [idpessoa]);
@@ -77,7 +77,7 @@ class IntelligenceService {
       try {
         // 2. Try Local Cache (Resilience)
         const db = getLocalDb();
-        const row = db.prepare('SELECT risk_score, confidence FROM ml_churn_risk WHERE idpessoa = ?').get(idpessoa);
+        const row = db.prepare('SELECT risk_score, confidence, reason_code, reason_detail FROM ml_churn_risk WHERE idpessoa = ?').get(idpessoa);
         return row || null;
       } catch (cacheErr) {
         console.warn('[ML] Local cache fetch failed for churn risk:', cacheErr.message);
@@ -265,6 +265,7 @@ class IntelligenceService {
     const mlRisk = priorityData.mlRisk || await this._getMLScores(profile.idpessoa);
     if (mlRisk && parseFloat(mlRisk.risk_score) > 75 && parseFloat(mlRisk.confidence) > 70) {
       insights.push(`Alto Risco de Evasao (Confianca: ${mlRisk.confidence}%) 🔥`);
+      if (mlRisk.reason_detail) insights.push(`Motivo: ${mlRisk.reason_detail}`);
     } else {
       const freq = stats.freq_dias || 0;
       const sinceLast = priorityData.dias_sem_compra || 0;
@@ -293,6 +294,12 @@ class IntelligenceService {
       
       insights.push(`${prefix}: Alta afinidade com produto ${rec.idproduto} 🎯`);
       if (rec.pitch) insights.push(`Dica: "${rec.pitch}"`);
+    } else {
+      const trending = await this.getTrendingProducts();
+      if (trending.length > 0) {
+        const top = trending[0];
+        insights.push(`Tendencia: O produto ${top.idprod} esta com alta nas vendas! 📈`);
+      }
     }
 
     if (stats.valor_lifetime > 5000) {
@@ -335,6 +342,22 @@ class IntelligenceService {
         console.warn('[ML] Local cache fetch failed for affinity:', cacheErr.message);
         return [];
       }
+    }
+  }
+
+  /**
+   * Fetches the top trending products globally.
+   */
+  async getTrendingProducts() {
+    try {
+      const res = await ecoPool.query("SELECT valor FROM config_sistema WHERE chave = 'TRENDING_PRODUCTS'");
+      if (res.rows.length > 0) {
+        return JSON.parse(res.rows[0].valor);
+      }
+      return [];
+    } catch (e) {
+      console.warn('[INTEL] Failed to fetch trending products:', e.message);
+      return [];
     }
   }
 }

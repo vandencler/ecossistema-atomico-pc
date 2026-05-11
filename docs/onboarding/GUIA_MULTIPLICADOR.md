@@ -5,13 +5,14 @@ Como Multiplicador da Fase 6, você é o braço direito da equipe de Marketing e
 
 ---
 
-### 1. Seu Papel na Segunda-Feira (04/05)
+### 1. Seu Papel na Segunda-Feira (11/05)
 1. **Apoio no Acesso:** Garanta que os colegas da sua unidade consigam logar e que os indicadores estejam **VERDES** 🟢.
 2. **Caçador de Dúvidas:** Quando alguém tiver uma dúvida, mostre como encontrar a resposta no **FAQ**.
 3. **Evangelista do SAV:** Incentive a equipe a sugerir correções. Dados limpos = Vendas rápidas.
+   - **Campanha Semana 1:** Foque no Boas-vindas e primeiros acessos! Use as pílulas 1 a 3 para motivar o time.
 4. **Filtro de Bugs:** Se algo não funcionar, verifique se é um erro de conexão antes de reportar ao suporte.
 
-### 2. Destaques da Versão 1.1.2 (Interface Padronizada)
+### 2. Destaques da Versão 1.1.6 (Interface Padronizada)
 O sistema ficou mais moderno e fácil de ler. Explique para a equipe:
 - **Barra Lateral Inteligente:** Se a barra lateral sumir, basta clicar no ícone flutuante do EAV.
 - **MetricCards:** Os blocos coloridos no topo que mostram o "resumo" do cliente (Total Comprado, Última Visita).

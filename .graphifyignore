@@ -1,0 +1,20 @@
+﻿# GRAPHIFY IGNORE - ecossistema-atomico-pc
+# Gerado automaticamente por graphify-bootstrap.ps1
+# Data: 2026-05-05 15:50
+# GOVERNANCA: Este projeto eh ISOLADO.
+
+# Bloquear todos os projetos irmaos
+../ecossistema-atomico/
+../ecossistema-atomico-Opus-4.6-Thinking/
+../ephicaz-30/
+../obsidian/
+../openclaw/
+../paperclip/
+../screenshots/
+
+../
+
+node_modules/
+dist/
+.git/
+graphify-out/

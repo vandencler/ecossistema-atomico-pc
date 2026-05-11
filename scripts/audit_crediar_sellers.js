@@ -1,0 +1,1 @@
+const { pool } = require('../src/main/db'); pool.query('SELECT count(*) FROM wshop.crediar WHERE stvendedor = true').then(res => { console.log('Sellers in crediar:', res.rows[0].count); process.exit(); });

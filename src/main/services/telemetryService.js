@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const os = require('os');
 
 const SESSION_ID = crypto.randomUUID();
+const APP_VERSION = require('../../../package.json').version;
 let systemIdentity = `${os.userInfo().username}@${os.hostname()}` || 'unknown';
 
 let isFlushing = false;
@@ -23,7 +24,14 @@ async function trackEvent(eventName, userId, payload = {}) {
   const occurredAt = new Date().toISOString();
   const targetUser = userId && userId !== 'auto' && userId !== 'sistema' ? userId : systemIdentity;
 
-  console.log(`[TELEMETRY] ${eventName} | User: ${targetUser}`);
+  // Enforce version in payload
+  const enrichedPayload = {
+    ...payload,
+    version: APP_VERSION,
+    session_id: SESSION_ID
+  };
+
+  console.log(`[TELEMETRY] ${eventName} | User: ${targetUser} | Ver: ${APP_VERSION}`);
 
   try {
     const db = getLocalDb();
@@ -31,7 +39,7 @@ async function trackEvent(eventName, userId, payload = {}) {
       db.prepare(`
         INSERT INTO telemetry_buffer (event_name, user_id, payload, occurred_at)
         VALUES (?, ?, ?, ?)
-      `).run(eventName, targetUser, JSON.stringify(payload), occurredAt);
+      `).run(eventName, targetUser, JSON.stringify(enrichedPayload), occurredAt);
     }
   } catch (e) {
     if (e.message.includes('not initialized')) return;

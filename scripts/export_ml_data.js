@@ -40,7 +40,9 @@ async function exportMlData() {
         ) i ON d.iddocumento = i.iddocumento
         LEFT JOIN wshop.docitem di ON d.iddocumento = di.iddocumento
         LEFT JOIN wshop.produto pr ON di.idproduto = pr.idproduto
+        WHERE p.idpessoa IS NOT NULL AND p.idpessoa != ''
         GROUP BY p.idpessoa
+        HAVING COUNT(DISTINCT d.iddocumento) > 0
       )
       SELECT * FROM client_stats
     `);
@@ -50,7 +52,7 @@ async function exportMlData() {
       churnCsv += `${r.idpessoa},${r.recency_days || 999},${r.frequency},${r.monetary_value},${r.tenure_days || 0},${r.avg_basket_size || 0},${r.group_diversity}\n`;
     });
     fs.writeFileSync(churnFile, churnCsv);
-    console.log(`[ML-ETL] Salvo RFM+ de ${rfmQuery.rowCount} clientes em ${churnFile}`);
+    console.log(`[ML-ETL] Salvo RFM+ de ${rfmQuery.rowCount} clientes ativos em ${churnFile}`);
 
     // 2. Export Data for Affinity Model (Customer-Product totals)
     console.log('[ML-ETL] Extraindo base de itens (Basket)...');
@@ -62,6 +64,7 @@ async function exportMlData() {
       FROM wshop.documen d
       JOIN wshop.docitem i ON d.iddocumento = i.iddocumento
       WHERE d.tpoperacao = 'V' AND (d.stdocumentocancelado IS NULL OR d.stdocumentocancelado != 'S')
+      AND d.idpessoa IS NOT NULL AND d.idpessoa != ''
       GROUP BY d.idpessoa, i.idproduto
       HAVING SUM(i.qtitem) > 0
     `);
@@ -83,6 +86,7 @@ async function exportMlData() {
       FROM wshop.docitem
       JOIN wshop.documen USING (iddocumento)
       WHERE wshop.documen.tpoperacao = 'V' AND (wshop.documen.stdocumentocancelado IS NULL OR wshop.documen.stdocumentocancelado != 'S')
+      AND wshop.documen.idpessoa IS NOT NULL AND wshop.documen.idpessoa != ''
       AND dtemissao > CURRENT_TIMESTAMP - INTERVAL '180 days'
     `);
 

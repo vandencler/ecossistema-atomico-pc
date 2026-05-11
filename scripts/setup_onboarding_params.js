@@ -14,7 +14,7 @@ async function setupOnboardingConfigs() {
   const configs = [
     {
       chave: 'omni_welcome_message',
-      valor: 'Olá! Você acaba de ser ativado no EAV v1.1.2! 🚀 Sua missão é liderar a transformação digital na sua unidade. Dica Pro: Se o menu sumir, clique no logo flutuante no canto da tela! O sistema conta com Modo Offline, Busca Atômica e Inteligência.',
+      valor: 'Olá! Você acaba de ser ativado no EAV v1.1.6! 🚀 Corrigimos o erro de conexão externa.\n\n📥 Baixe agora: https://github.com/vandencler/ecossistema-atomico-pc/releases/latest\n📖 Guia de Conexão: https://github.com/vandencler/ecossistema-atomico-pc/blob/master/docs/onboarding/AUTOCONFIGURACAO.md',
       descricao: 'Mensagem de boas-vindas para novos usuários (WhatsApp)'
     },
     {

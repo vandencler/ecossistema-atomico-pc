@@ -19,6 +19,7 @@ const { reconcileCorrections } = require('./src/main/services/reconciliationServ
 const { flushTelemetry, trackEvent, setIdentity, getIdentity } = require('./src/main/services/telemetryService');
 const bulkIntelligenceService = require('./src/main/services/bulkIntelligenceService');
 const npsService = require('./src/main/services/npsService');
+const monitoringService = require('./src/main/services/monitoringService');
 
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
@@ -42,12 +43,56 @@ autoUpdater.on('update-available', () => {
 });
 
 autoUpdater.on('update-downloaded', () => {
-  logEvent('SYSTEM_UPDATE', '0', 'Download concluido. Instalacao na proxima inicializacao.');
+  logEvent('SYSTEM_UPDATE', '0', 'Download concluido. A instalacao ocorrera no proximo reinicio.');
+  
+  // Optional: Notify user or force restart if critical
+  dialog.showMessageBox(uiService.mainWindow, {
+    type: 'info',
+    title: 'Atualização Disponível',
+    message: 'Uma nova versão do sistema foi baixada. Ela será instalada automaticamente ao fechar o programa.',
+    buttons: ['OK', 'Reiniciar Agora']
+  }).then((result) => {
+    if (result.response === 1) {
+      autoUpdater.quitAndInstall();
+    }
+  });
 });
 
 autoUpdater.on('error', (err) => {
   console.error('[UPDATER] Erro na verificacao de atualizacao:', err.message);
 });
+
+async function checkVersionEnforcement() {
+  try {
+    const currentVersion = require('./package.json').version;
+    const minVersion = await getConfigValue('min_app_version', '1.1.0');
+    
+    const semverCompare = (a, b) => {
+      const pa = a.split('.').map(Number);
+      const pb = b.split('.').map(Number);
+      for (let i = 0; i < 3; i++) {
+        if (pa[i] > pb[i]) return 1;
+        if (pa[i] < pb[i]) return -1;
+      }
+      return 0;
+    };
+
+    if (semverCompare(currentVersion, minVersion) < 0) {
+      logEvent('SYSTEM_REJECTED', '0', `Versao obsoleta detectada: ${currentVersion} < ${minVersion}`);
+      
+      dialog.showMessageBoxSync({
+        type: 'error',
+        title: 'Atualização Obrigatória',
+        message: `Sua versão (v${currentVersion}) está obsoleta.\n\nA versão mínima permitida é v${minVersion}.\nO sistema será encerrado para garantir a integridade dos dados.`,
+        buttons: ['Sair']
+      });
+      
+      app.quit();
+    }
+  } catch (e) {
+    console.error('[VERSION] Falha ao verificar enforcement:', e.message);
+  }
+}
 
 async function runPreFlight() {
   try {
@@ -218,6 +263,7 @@ ipcMain.handle('get-system-configs', safeInvoke(() => getSystemConfigs()));
 ipcMain.handle('set-system-config', safeInvoke((e, c, v) => setSystemConfig(c, v)));
 ipcMain.handle('get-health', safeInvoke(() => checkHealth()));
 ipcMain.handle('run-reconciliation', safeInvoke(() => reconcileCorrections()));
+ipcMain.handle('get-monitoring-snapshots', safeInvoke((e, limit) => monitoringService.getRecentSnapshots(limit)));
 ipcMain.handle('open-whatsapp', safeInvoke((e, p) => uiService.openWhatsApp(p)));
 ipcMain.handle('open-external', safeInvoke((e, url) => {
   const { shell } = require('electron');
@@ -376,6 +422,7 @@ ipcMain.handle('bulk-export-priority', async (event, priorityBucket, format) => 
 
 app.whenReady().then(async () => {
   await runPreFlight();
+  await checkVersionEnforcement();
 
   const savedIdentity = await getConfigValue('app_identity');
   if (savedIdentity) setIdentity(savedIdentity);
@@ -398,6 +445,9 @@ app.whenReady().then(async () => {
   }
 
   setupRealTimeListener();
+
+  // Start 24/7 Operational Monitoring (EAV-177)
+  monitoringService.start(15 * 60 * 1000); // 15 mins for production baseline
 
   const staggerDelay = Math.floor(Math.random() * 600000);
 

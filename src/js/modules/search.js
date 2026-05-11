@@ -17,12 +17,18 @@ export function setupSearch(onOpenClient) {
 function debounceSearch(value, onOpenClient) {
   clearTimeout(searchTimeout);
   const container = $('search-results');
-  if (value.trim().length < 2) {
+  const trimmed = value.trim();
+  if (trimmed.length < 2) {
     searchRequestId += 1;
     setChildren(container, []);
     return;
   }
-  searchTimeout = setTimeout(() => doSearch(value, onOpenClient), 300);
+  
+  // Temporary throttling for legacy phone (nrpager) searches (EAV-157)
+  const isNumeric = /\d/.test(trimmed);
+  const delay = isNumeric ? 800 : 300;
+
+  searchTimeout = setTimeout(() => doSearch(value, onOpenClient), delay);
 }
 
 async function doSearch(query, onOpenClient) {

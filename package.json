@@ -1,6 +1,6 @@
 {
   "name": "ecossistema-atomico",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Ecossistema Atomico de Vendas - Emporio Natural",
   "main": "main.js",
   "scripts": {
@@ -35,8 +35,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "emporio-natural",
-        "repo": "ecossistema-atomico"
+        "owner": "vandencler",
+        "repo": "ecossistema-atomico-pc"
       }
     ],
     "win": {
@@ -53,9 +53,13 @@
     }
   },
   "dependencies": {
+    "axios": "^1.16.0",
     "better-sqlite3": "^12.9.0",
+    "body-parser": "^2.2.2",
     "electron-updater": "^6.8.3",
     "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "nat-upnp": "^1.1.1",
     "pdfmake": "^0.2.10",
     "pg": "^8.13.0"
   },

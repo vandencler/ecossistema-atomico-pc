@@ -312,6 +312,8 @@ CREATE TABLE IF NOT EXISTS ml_churn_risk (
     next_purchase_estimate DATE,
     confidence DECIMAL(5,2) DEFAULT 0.00,
     model_version VARCHAR(50),
+    reason_code VARCHAR(100),
+    reason_detail TEXT,
     calculado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

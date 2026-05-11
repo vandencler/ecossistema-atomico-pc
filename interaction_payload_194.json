@@ -1,0 +1,10 @@
+{
+  "kind": "request_confirmation",
+  "payload": {
+    "version": 1,
+    "prompt": "Manually execute docs/EAV_DBA_TRIGRAM_EXPANSION_EAV-194.sql?",
+    "description": "The CTO is blocked from expanding the Trigram indexes (EAV-197) because the `eav_writer` role lacks permissions to alter `wshop.pessoas` (owned by `postgres`). Please manually execute the optimization script located at `docs/EAV_DBA_TRIGRAM_EXPANSION_EAV-194.sql` on the Mirror DB (192.168.2.163) as a superuser. Confirm once this is done so we can resume validation.",
+    "idempotencyKey": "confirmation:EAV-194:trigram-manual-exec:v1"
+  },
+  "continuationPolicy": "wake_assignee"
+}

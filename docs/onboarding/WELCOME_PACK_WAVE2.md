@@ -9,7 +9,7 @@
 
 Olá, [NOME]!
 
-O Ecossistema Atômico de Vendas (EAV) v1.1.2 já está liberado no seu desktop! 🎓
+O Ecossistema Atômico de Vendas (EAV) v1.1.6 já está liberado no seu desktop! 🎓
 
 Agora você faz parte do grupo de **50 pioneiros** que estão transformando as vendas na nossa empresa. O EAV traz:
 - ⚡ **Modo Offline:** Nunca pare de vender.

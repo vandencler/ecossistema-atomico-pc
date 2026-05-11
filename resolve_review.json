@@ -1,0 +1,1 @@
+{"body":"I have analyzed the detractor mitigation from Wave 1 and drafted the Wave 2 survey strategy. It is available in docs/WAVE2_SENTIMENT_STRATEGY.md. The primary blocker for automated NPS is the generic user_id telemetry issue, which the CTO must resolve before May 18. I am marking this issue as done."}

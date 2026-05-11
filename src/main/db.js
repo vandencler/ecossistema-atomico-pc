@@ -46,41 +46,73 @@ function dbConfig(configKey, envPrefix, fallback) {
   };
 }
 
-const mirrorPool = new Pool(dbConfig('mirror', 'MIRROR', {
+class HttpProxyPool {
+  constructor(config, label) {
+    this.config = config;
+    this.label = label;
+  }
+  async query(text, params) {
+    const axios = require('axios');
+    const sql = typeof text === 'string' ? text : text.text;
+    const values = params || (typeof text === 'object' ? text.values : []);
+    
+    const response = await axios.post(`${this.config.host}/query`, {
+      db: this.label === 'ecosystem' ? 'eco' : (this.label === 'production' ? 'prod' : 'mirror'),
+      sql: sql,
+      params: values
+    }, {
+      headers: { 'x-api-key': 'EAV_SECRET_2026_RECOVERY' },
+      timeout: 15000
+    });
+    return { rows: response.data };
+  }
+  async connect() { 
+    return { 
+      query: (t, p) => this.query(t, p), 
+      release: () => {} 
+    }; 
+  }
+  on() {}
+  async end() {
+    return Promise.resolve();
+  }
+}
+
+function createPool(config, label) {
+  if (config.host && (config.host.startsWith('http://') || config.host.startsWith('https://'))) {
+    console.log(`[DB] Using HTTP Proxy for ${label}: ${config.host}`);
+    return new HttpProxyPool(config, label);
+  }
+  const p = new Pool(config);
+  p.on('error', (err) => {
+    console.error(`Erro inesperado no Pool ${label.toUpperCase()}:`, err.message);
+  });
+  return p;
+}
+
+const mirrorPool = createPool(dbConfig('mirror', 'MIRROR', {
   host: '127.0.0.1',
   port: 5432,
   database: 'ALTERDATA_SHOP_ESPELHO',
   user: 'postgres',
   max: 5
-}));
+}), 'mirror');
 
-mirrorPool.on('error', (err) => {
-  console.error('Erro inesperado no Pool MIRROR:', err.message);
-});
-
-const ecoPoolBase = new Pool(dbConfig('ecosystem', 'ECOSYSTEM', {
+const ecoPoolBase = createPool(dbConfig('ecosystem', 'ECOSYSTEM', {
   host: '127.0.0.1',
   port: 5432,
   database: 'ECOSSISTEMA_ATOMICO',
   user: 'postgres',
   max: 10
-}));
+}), 'ecosystem');
 
-ecoPoolBase.on('error', (err) => {
-  console.error('Erro inesperado no Pool ECOSYSTEM:', err.message);
-});
-
-const originalPoolBase = new Pool(dbConfig('production', 'PRODUCTION', {
+const originalPoolBase = createPool(dbConfig('production', 'PRODUCTION', {
   host: '192.168.2.103',
   port: 5432,
   database: 'ALTERDATA_SHOP',
   user: 'eav_updater',
   max: 3
-}));
-
-originalPoolBase.on('error', (err) => {
-  console.error('Erro inesperado no Pool PRODUCTION:', err.message);
-});
+}), 'production');
 
 // Throttlers to prevent overloading the databases
 const mirrorThrottler = new Throttler('MIRROR', settings.throttleMirror, 15);

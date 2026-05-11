@@ -50,11 +50,50 @@ function normalizeFieldValue(config, value) {
   if (config.type === 'date') text = normalizeDateInput(text);
   if (config.type === 'uf') text = text.toUpperCase();
   if ((config.type === 'phone' || config.type === 'cep') && text) text = text.replace(/\D/g, '');
+  if (config.type === 'phone' && text) text = normalizeBrazilianPhone(text);
   if (config.type === 'email' && text && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
     throw new Error(`${config.label} invalido`);
   }
   if (text.length > config.max) throw new Error(`${config.label} excede ${config.max} caracteres`);
   return text;
+}
+
+/**
+ * Normalizes a Brazilian phone number, adding the 9th digit if missing for mobile numbers.
+ * Result is always DD + 8 or 9 digits (10 or 11 total). No country code.
+ */
+function normalizeBrazilianPhone(raw) {
+  if (!raw) return '';
+  let digits = String(raw).replace(/\D/g, '');
+
+  // Remove country code 55 if present (standard for Brazilian context in this app)
+  if (digits.length >= 12 && digits.startsWith('55')) {
+    digits = digits.substring(2);
+  }
+
+  // Remove leading zero
+  if (digits.startsWith('0') && digits.length >= 11) {
+    digits = digits.substring(1);
+  }
+
+  // If 10 digits (DD + 8 digits), check if it's a mobile number (starts with 6-9)
+  if (digits.length === 10) {
+    const ddd = digits.substring(0, 2);
+    const number = digits.substring(2);
+    const firstDigit = number[0];
+
+    // Brazilian mobile numbering: numbers starting with 6, 7, 8, or 9 are mobile
+    if (['6', '7', '8', '9'].includes(firstDigit)) {
+      return ddd + '9' + number;
+    }
+  }
+
+  // Basic validation: must be 10 or 11 digits
+  if (digits.length >= 10 && digits.length <= 11) {
+    return digits;
+  }
+
+  return '';
 }
 
 function normalizeCorrectionPayload(payload) {
@@ -151,6 +190,7 @@ module.exports = {
   normalizeId,
   normalizeDateInput,
   normalizeFieldValue,
+  normalizeBrazilianPhone,
   normalizeCorrectionPayload,
   dateParts,
   isBirthdayToday,

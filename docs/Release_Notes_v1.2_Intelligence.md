@@ -11,6 +11,7 @@ Esta versão marca a maturidade do motor de inteligência do EAV, trazendo model
 ### 📈 Churn Preditivo v1.2 (Supervisionado)
 O modelo de risco de evasão foi totalmente reformulado. Saímos de uma heurística simples para um **Modelo Supervisionado Ponderado**:
 *   **Precisão Elevada (97.1%):** Redução drástica de falsos positivos. O sistema agora foca apenas em clientes com real probabilidade de abandono.
+*   **Classificação de Motivos (NOVO):** Além do score, o sistema agora identifica o **porquê** do risco (ex: Baixa Diversidade, Bloqueio de Crédito, Inatividade Prolongada), fornecendo argumentos prontos para o vendedor.
 *   **Novas Variáveis:** O score agora considera o **Histórico de Crédito**, **Diversidade de Categorias** e o **Tempo de Casa (Tenure)** do cliente.
 *   **Badges Inteligentes:** Novos alertas visuais indicam se o risco é por atraso financeiro ou mudança de comportamento.
 

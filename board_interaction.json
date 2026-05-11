@@ -1,0 +1,10 @@
+{
+  "kind": "request_confirmation",
+  "payload": {
+    "version": 1,
+    "idempotencyKey": "confirmation:EAV-202:dba_approval:v1",
+    "title": "Unblock DBA & Resolve Stale Run",
+    "prompt": "Approve permission escalation for EAV-197 and authorize cancellation of stale run 26bf4491?",
+    "summary": "DBA is silent (EAV-202) because it is blocked on EAV-197 (Permission Denied on Mirror DB). I have reviewed the SQL (docs/EAV_DBA_TRIGRAM_EXPANSION_EAV-194.sql) and it is safe. Request: 1) Approve the permission escalation (288b7547) for superuser execution. 2) Authorize the cancellation of the stale DBA run (26bf4491) to allow a clean restart once permissions are granted."
+  }
+}

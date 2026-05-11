@@ -1,4 +1,4 @@
-const { pool, ecoPool } = require('../db');
+const { pool, ecoPool, originalPool } = require('../db');
 const { logError, logEvent } = require('./logService');
 
 let lastHealth = null;
@@ -9,7 +9,8 @@ async function checkHealth() {
     status: 'HEALTHY',
     databases: {
       mirror: { status: 'UNKNOWN' },
-      ecosystem: { status: 'UNKNOWN' }
+      ecosystem: { status: 'UNKNOWN' },
+      production: { status: 'UNKNOWN' }
     }
   };
 
@@ -35,7 +36,15 @@ async function checkHealth() {
           'idx_pessoas_nrcgc_cic_trgm',
           'idx_pessoas_phones_trgm',
           'idx_pessoas_telwa_trgm',
-          'idx_pessoas_phone_trgm'
+          'idx_pessoas_phone_trgm',
+          'idx_pessoas_pager_trgm',
+          'idx_pessoas_email_trgm',
+          'idx_pessoas_email2_trgm',
+          'idx_pessoas_nmfantasia_trgm',
+          'idx_pessoas_nrincrest_rg_trgm',
+          'idx_pessoas_nmendereco_trgm',
+          'idx_pessoas_nmbairro_trgm',
+          'idx_pessoas_nmcidade_trgm'
         )
     `);
     const foundIndexes = indexCheck.rows.map(r => r.indexname);
@@ -68,6 +77,14 @@ async function checkHealth() {
         }, {}),
         'idx_pessoas_telwa_trgm': foundIndexes.includes('idx_pessoas_telwa_trgm'),
         'idx_pessoas_phone_trgm': foundIndexes.includes('idx_pessoas_phone_trgm'),
+        'idx_pessoas_pager_trgm': foundIndexes.includes('idx_pessoas_pager_trgm'),
+        'idx_pessoas_email_trgm': foundIndexes.includes('idx_pessoas_email_trgm'),
+        'idx_pessoas_email2_trgm': foundIndexes.includes('idx_pessoas_email2_trgm'),
+        'idx_pessoas_nmfantasia_trgm': foundIndexes.includes('idx_pessoas_nmfantasia_trgm'),
+        'idx_pessoas_nrincrest_rg_trgm': foundIndexes.includes('idx_pessoas_nrincrest_rg_trgm'),
+        'idx_pessoas_nmendereco_trgm': foundIndexes.includes('idx_pessoas_nmendereco_trgm'),
+        'idx_pessoas_nmbairro_trgm': foundIndexes.includes('idx_pessoas_nmbairro_trgm'),
+        'idx_pessoas_nmcidade_trgm': foundIndexes.includes('idx_pessoas_nmcidade_trgm'),
         'hasTrgmExtension': hasTrgmExtension
       },
       throttle: pool.throttler.getStats(),
@@ -167,6 +184,38 @@ async function checkHealth() {
     health.status = 'DEGRADED';
     health.databases.ecosystem = { status: 'ERROR', error: e.message };
     await logError('HEALTH_ECOSYSTEM', e);
+  }
+
+  // Connectivity and Operational Gate Check for Production ERP (192.168.2.103)
+  try {
+    const start = Date.now();
+    await originalPool.query('SELECT 1');
+    
+    // Check access to critical tables for governed write-back (eav_updater role)
+    const tablesToCheck = ['pessoas', 'crediar'];
+    const accessibleTables = {};
+    for (const table of tablesToCheck) {
+      try {
+        await originalPool.query(`SELECT 1 FROM wshop.${table} LIMIT 1`);
+        accessibleTables[table] = true;
+      } catch (tableErr) {
+        accessibleTables[table] = false;
+        console.warn(`[HEALTH] Tabela PROD wshop.${table} nao acessivel: ${tableErr.message}`);
+      }
+    }
+
+    health.databases.production = { 
+      status: 'OK', 
+      latencyMs: Date.now() - start,
+      operationalGate: accessibleTables.pessoas === true,
+      accessibleTables,
+      throttle: originalPool.throttler.getStats()
+    };
+  } catch (e) {
+    // Production ERP failure is critical but might be expected if offline or VPN issues
+    health.databases.production = { status: 'ERROR', error: e.message };
+    if (health.status !== 'DEGRADED') health.status = 'DEGRADED';
+    await logError('HEALTH_PRODUCTION', e);
   }
 
   if (health.status !== 'HEALTHY') {

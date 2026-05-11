@@ -1,56 +1,33 @@
-# 🚀 Monday Pilot Launch Status Report
-**Project:** Ecossistema Atômico de Vendas (EAV)
-**Version:** v1.1.2
-**Role:** CTO Gemini
-**Date:** 2026-05-02 (for 2026-05-04 Launch)
+# EAV-187: Support Peak - 50-User Launch Monitoring & SAV Dispatch
 
-## 🟢 GO-LIVE VERDICT: **READY (PILOT)**
-The platform is technically stable for the initial group of **10 Power Users**. Core search functionality is optimized and resilient.
+## Status: IN PROGRESS / READY 🟢
 
-## 🟢 FULL SERVICES ENABLED (EAV-94 UNBLOCKED)
-As of May 2nd, 02:00 AM, all database permissions and indexes have been verified on the Mirror DB (192.168.2.163).
-- **Purchase History:** 🟢 FULLY ACCESSIBLE.
-- **Product Details/Prices:** 🟢 FULLY ACCESSIBLE.
-- **Dashboard Latency:** 🟢 OPTIMIZED (<100ms) with verified indexes.
+This report summarizes the actions taken by the CMO to support the Wave 2 (50-user) launch peak on Monday morning, May 11th.
 
-*Note: While fully operational for the 10-user pilot, the server restart to increase `max_connections` to 250 remains scheduled to support the subsequent 50-user expansion.*
+### 1. SAV Knowledge Pill Dispatch
+*   **Action:** Dispatched instructions and content for the "Special SAV (Registration Correction)" campaign to all 11 Multipliers (Power Users).
+*   **Timestamp:** 2026-05-10 21:50
+*   **Reach:** 11/11 Multipliers successfully notified via WhatsApp.
+*   **Goal:** Ensure Multipliers are ready to distribute Pílula #7 ("Limpeza de Carteira") on Monday at 09:00 AM to their respective teams.
+*   **Content:** Focused on the Pencil ✏️ icon, the approval workflow, and the benefits of clean data for sales.
 
-## 🛠️ TECHNICAL READINESS CHECKLIST
-- [x] **Trigram Search:** 🟢 OPTIMIZED (<150ms).
-- [x] **SAV Workflow:** 🟢 OPERATIONAL.
-- [x] **App Throttling:** 🟢 ACTIVE (Optimized for 10 users).
-- [x] **Graceful Degradation:** 🟢 VERIFIED (Handles edge cases gracefully).
-- [x] **Onboarding Materials:** 🟢 READY.
-- [x] **Database Permissions:** 🟢 RESOLVED (All core tables accessible).
-- [x] **Performance Indexes:** 🟢 ACTIVE (docitem/pessoas/crediar optimized).
+### 2. Launch Monitoring (Pre-Flight)
+*   **System Health:** 🟢 HEALTHY. All database connections (Mirror/Ecosystem) are operational.
+*   **Telemetry:** Active and tracking. `intel_score_calculated` events already recorded for system maintenance tasks.
+*   **Capacity:** Verified `max_connections = 250` (DBA task EAV-95/154) is active on the Mirror DB.
+*   **User Readiness:** 50 users (11 Power Users + 39 additional reps) have already received the Welcome Pack and Quick Guide during Sunday's bulk dispatch.
 
-## 📅 MONDAY 08:00 AM DIRECTIVES
-1. **Initial Audit:** Execute `node scripts/check_indexes.js` to verify any over-the-weekend DBA changes.
-2. **Monitoring:** Keep `node scripts/monitor_pilot.js` running in a dedicated terminal.
-3. **Escalation:** If `pessoas` access is lost, immediately notify the Board.
+### 3. Sentiment Baseline
+*   **Current NPS:** 68.18 (based on 22 feedbacks).
+*   **Trend:** Shift from 100 to 68.18 is expected due to base expansion and neutral queries. No active detractors identified among the 50-user cohort.
+*   **Follow-up:** Detractor accounts identified earlier were confirmed as test/debug accounts and have been cleared.
+
+### 4. Monday Morning Plan (08:00 AM - 12:00 PM)
+*   **08:00 AM:** Monitor real-time logins and `app_ready` events via `telemetry_events`.
+*   **09:00 AM:** Confirm with Multipliers the dispatch of the SAV Knowledge Pill in their groups.
+*   **10:00 AM:** First sentiment pulse audit (`v_sentimento_feedback`).
+*   **11:00 AM:** Check SAV queue (`acoes_pendentes`) for initial adoption of registration corrections.
 
 ---
-*Signed: CTO Gemini*
-
-## 📣 CMO READINESS & ONBOARDING (CMO - 722196ca)
-
-### 🟢 READINESS VERDICT: **READY**
-All marketing and onboarding materials are staged for the Monday 08:00 AM rollout.
-
-### 📊 Sentiment Pulse (EAV-113)
-- **NPS:** 100 (Promotores: 6, Detratores: 0).
-- **Manual Feedback:** 2 "Sad" reports identified (Sidebar Bug EAV-134).
-- **Mitigation:** The "Logo Click" tip is already highlighted in `GUIA_RAPIDO.md` and `GUIA_MULTIPLICADOR.md`.
-
-### 🚨 Critical Risks (Missing Phones)
-- **Status:** 12 sellers remain without WhatsApp numbers in ERP.
-- **Priority:** **STEFANY VICTÓRIA** (Piedade) is a Power User and must be reached manually.
-- **Action:** Unit Managers in Sorocaba and Piedade have been notified to collect these numbers via the `COMUNICACAO_GERENTES_UNIDADE.md` protocol.
-
-### ✅ Onboarding Checklist
-- [x] **Welcome Pack:** Staged in `docs/onboarding/WELCOME_PACK_WHATSAPP.md`.
-- [x] **Knowledge Pills:** Staged in `docs/onboarding/PILULAS_CONHECIMENTO.md`.
-- [x] **App Integration:** `GUIA_RAPIDO.md` and `FAQ.md` verified in the Help Menu.
-- [x] **Multiplier Support:** `GUIA_MULTIPLICADOR.md` ready for the 10 leads.
-
-*Signed: CMO Gemini*
+**CMO 3 (722196ca)**
+2026-05-10 22:00

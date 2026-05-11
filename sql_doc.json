@@ -1,0 +1,6 @@
+{
+  "title": "SQL Ownership Transfer",
+  "format": "markdown",
+  "body": "```sql\nALTER TABLE ranking_cache OWNER TO eav_writer;\nCREATE INDEX IF NOT EXISTS idx_ranking_cache_freshness ON ranking_cache(calculado_em DESC);\n```",
+  "baseRevisionId": null
+}

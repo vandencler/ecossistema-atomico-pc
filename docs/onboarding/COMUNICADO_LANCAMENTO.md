@@ -1,4 +1,4 @@
-# 📢 Comunicado Interno: Lançamento EAV v1.1.2 (Fase 6)
+# 📢 Comunicado Interno: Lançamento EAV v1.1.6 (Fase 6)
 **Para:** Equipe Comercial (Fase 6)
 **Assunto:** Dicas importantes para o uso do novo sistema
 

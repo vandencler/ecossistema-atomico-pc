@@ -16,7 +16,7 @@ Para garantir que o sistema está conversando com a base de dados oficial:
 - **Dica:** O sistema entende erros comuns. Não precisa de acentos ou pontos.
 - **Atalho:** Use as **Setas do Teclado** para navegar entre os resultados e **Enter** para abrir.
 
-### 3. Entendendo a Nova Interface (v1.1.2)
+### 3. Entendendo a Nova Interface (v1.1.6)
 O EAV usa inteligência visual para facilitar seu trabalho. Procure por:
 - **Barra Lateral "Escondida":** Se o menu sumir, clique no logo flutuante do EAV para trazê-lo de volta.
 - **MetricCards:** Os blocos coloridos no topo (Total Comprado, Frequência) que dão o resumo do cliente.

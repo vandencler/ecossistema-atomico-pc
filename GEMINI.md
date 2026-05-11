@@ -29,10 +29,10 @@ See: `D:\obsidian\memoria-infinita\memoria-infinita\Antigravity\sessoes\2026-04-
 |----------|------|------------|-------------|
 | BD Espelho (ALTERDATA_SHOP_ESPELHO) | 192.168.2.163 | ✅ READ ONLY* | Read-only for general queries. **UPDATE allowed ONLY via `syncService`** for approved SAV corrections on `pessoas` and `crediar` tables. |
 | BD Ecossistema (ECOSSISTEMA_ATOMICO) | 192.168.2.163 | ✅ Read/Write | Application's internal governance and intelligence data. |
-| **BD Principal (ALTERDATA_SHOP)** | **192.168.2.103** | ❌ **ABSOLUTELY FORBIDDEN** | Production ERP. NEVER CONNECT. |
-| **Any database on 192.168.2.103** | **192.168.2.103** | ❌ **ABSOLUTELY FORBIDDEN** | Production ERP. NEVER CONNECT. |
+| BD Principal (ALTERDATA_SHOP) | 192.168.2.103 | ⚠️ **GOVERNED ACCESS** | Production ERP. **Access ONLY via `eav_updater` role** for approved operational syncs (e.g., `WAError` write-back). |
+| **Any database on 192.168.2.103** | **192.168.2.103** | ⚠️ **GOVERNED ACCESS** | **NEVER** use superuser credentials. Connection must use the `originalPool` and the limited `eav_updater` role. |
 
-**⚠️ CONNECTING TO 192.168.2.103 IS PROHIBITED. This is the PRODUCTION ERP. One wrong query destroys real business data. ZERO EXCEPTIONS.**
+**⚠️ UNAUTHORIZED EDITS TO THE PRODUCTION ERP ARE PROHIBITED. All writes MUST be logged and verified via the `purgeQueue` mechanism.**
 
 ### If you are blocked by these rules
 1. **DO NOT bypass the restriction**

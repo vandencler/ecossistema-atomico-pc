@@ -76,9 +76,34 @@ export function onlyDigits(raw) {
   return String(raw || '').replace(/\D/g, '');
 }
 
+export function normalizeBrazilianPhone(raw) {
+  if (!raw) return '';
+  let digits = onlyDigits(raw);
+
+  // Remove country code 55 if present
+  if (digits.length >= 12 && digits.startsWith('55')) {
+    digits = digits.substring(2);
+  }
+
+  // Remove leading zero
+  if (digits.startsWith('0') && digits.length >= 11) {
+    digits = digits.substring(1);
+  }
+
+  // If 10 digits (DD + 8 digits), check if it's a mobile number (starts with 6-9)
+  if (digits.length === 10) {
+    const ddd = digits.substring(0, 2);
+    const number = digits.substring(2);
+    if (['6', '7', '8', '9'].includes(number[0])) {
+      return ddd + '9' + number;
+    }
+  }
+
+  return (digits.length >= 10 && digits.length <= 11) ? digits : '';
+}
+
 export function validPhoneDigits(raw) {
-  const digits = onlyDigits(raw);
-  return digits.length >= 10 && digits.length <= 13 ? digits : '';
+  return normalizeBrazilianPhone(raw);
 }
 
 export function phoneDisplay(raw) {

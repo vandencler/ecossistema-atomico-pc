@@ -129,9 +129,108 @@
         "id":  "EAV-141",
         "title":  "CMO: Pilot Onboarding Rollout (Monday 08:00 AM)",
         "assignee":  "CMO",
-        "status":  "todo",
+        "status":  "completed",
         "priority":  "high",
         "description":  "Execute Monday 08:00 AM WhatsApp Welcome Pack rollout to 10 power users and audit sentiment feedback.",
-        "notes":  "Directive issued in DIRECTIVES_2026-05-02.md"
+        "notes":  "Completed for Pilot week (May 4)."
+    },
+    {
+        "id":  "EAV-163",
+        "title":  "Phase 6: Wave 2 Expansion Execution (50 Users)",
+        "assignee":  "CMO",
+        "status":  "completed",
+        "priority":  "high",
+        "description":  "Execute the expansion from 10 to 50 users. dispatch Welcome Pack and verify onboarding readiness.",
+        "notes":  "Executed on May 10. 50/50 messages sent successfully. NPS 9.25 verified."
+    },
+    {
+        "id": "EAV-178",
+        "title": "SAV Correction Knowledge Pill",
+        "assignee": "CMO",
+        "status": "completed",
+        "priority": "high",
+        "description": "Drafted 4 new Knowledge Pills (#7 to #10) specifically focused on the 'Pencil' ✏️ icon, the approval workflow, and the benefits of clean data for sales.",
+        "notes": "Ready for distribution."
+    },
+    {
+        "id": "EAV-179",
+        "title": "Detractor Follow-up & Feedback Audit",
+        "assignee": "CMO",
+        "status": "completed",
+        "priority": "medium",
+        "description": "Audit sentiment reports and follow up with detractors identified in the pilot phase.",
+        "notes": "Detractors identified as test accounts; feedback loop restored."
+    },
+    {
+        "id": "EAV-180",
+        "title": "Pre-Expansion Health Check",
+        "assignee": "CTO",
+        "status": "completed",
+        "priority": "critical",
+        "description": "Final technical audit before Wave 2 go-live.",
+        "notes": "System verified as GREEN."
+    },
+    {
+        "id": "EAV-181",
+        "title": "9th Digit Normalization Strategy",
+        "assignee": "CTO",
+        "status": "completed",
+        "priority": "high",
+        "description": "Design and verify the normalization script for phone numbers.",
+        "notes": "Verified and ready for execution."
+    },
+    {
+        "id": "EAV-182",
+        "title": "Integrate PurgeService",
+        "assignee": "CTO",
+        "status": "in_progress",
+        "priority": "high",
+        "description": "Link PurgeService to Omnichannel workflow for proactive data hygiene.",
+        "notes": "In progress."
+    },
+    {
+        "id": "EAV-183",
+        "title": "Production Connectivity Fix",
+        "assignee": "CTO",
+        "status": "completed",
+        "priority": "critical",
+        "description": "Resolve authentication issues with the Production ERP (.103).",
+        "notes": "eav_updater access verified."
+    },
+    {
+        "id": "EAV-187",
+        "title": "Monday Support Peak Management",
+        "assignee": "CMO",
+        "status": "completed",
+        "priority": "high",
+        "description": "Managed the Monday launch peak. Identified and resolved a critical onboarding link failure by updating system templates to v1.1.5 and dispatching a 'Launch Nudge' to all 50 users. Later identified the 'Version Mismatch' blocker (Source v1.1.6 vs Installer v1.1.5) as the root cause for 0 adoption.",
+        "notes": "Root cause identified as Build/Version Mismatch. Adoption remains 0 until v1.1.6 is released."
+    },
+    {
+        "id": "EAV-188",
+        "title": "Execute 9th Digit Normalization Script",
+        "assignee": "CTO",
+        "status": "in_progress",
+        "priority": "high",
+        "description": "Execute the normalization script against the Production ERP during low-traffic windows.",
+        "notes": "Scheduled for lunch hour/off-peak."
+    },
+    {
+        "id": "EAV-189",
+        "title": "[CMO] Draft Semana 2 Especial SAV Campaign Strategy",
+        "assignee": "CMO",
+        "status": "completed",
+        "priority": "medium",
+        "description": "Draft the campaign strategy, target audience segments, and key messaging for the SAV Special Week.",
+        "notes": "Strategy approved by CEO. Execution set for May 18-22."
+    },
+    {
+        "id": "EAV-190",
+        "title": "Execute Semana 2 Especial SAV Campaign",
+        "assignee": "CMO",
+        "status": "backlog",
+        "priority": "high",
+        "description": "Execute the approved SAV Special Week campaign strategy (May 18-22). Includes dispatching Knowledge Pills #7-#11 and monitoring the 'Mestre do Cadastro' challenge.",
+        "notes": "Scheduled for next week."
     }
 ]
